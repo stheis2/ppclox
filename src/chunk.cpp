@@ -1,33 +1,48 @@
 #include "chunk.hpp"
 
 void Chunk::write(std::uint8_t byte) {
-    this->code.push_back(byte);
+    m_code.push_back(byte);
+}
+
+std::size_t Chunk::add_constant(Value value) {
+    m_constants.push_back(value);
+    return m_constants.size() - 1;
 }
 
 void Chunk::dissassemble(const char* name) {
     printf("== %s ==\n", name);
 
-    for (std::size_t offset = 0; offset < this->code.size();) {
-        offset = this->disassembleInstruction(offset);
+    for (std::size_t offset = 0; offset < m_code.size();) {
+        offset = this->disassemble_instruction(offset);
     }
 }
 
-std::size_t Chunk::disassembleInstruction(std::size_t offset) {
-    printf("%04d ", offset);
+std::size_t Chunk::disassemble_instruction(std::size_t offset) {
+    printf("%04zu ", offset);
 
-    std::uint8_t instruction = this->code.at(offset);
+    std::uint8_t instruction = m_code.at(offset);
 
     // Static cast is safe since we have a default case
     switch (static_cast<OpCode>(instruction)) {
+        case OpCode::CONSTANT:
+            return Chunk::constant_instruction("OP_CONSTANT", *this, offset);
         case OpCode::RETURN:
-            return Chunk::simpleInstruction("OP_RETURN", offset);
+            return Chunk::simple_instruction("OP_RETURN", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;
     }
 }
 
-std::size_t Chunk::simpleInstruction(const char* name, std::size_t offset) {
+std::size_t Chunk::simple_instruction(const char* name, std::size_t offset) {
     printf("%s\n", name);
     return offset + 1;
+}
+
+std::size_t Chunk::constant_instruction(const char* name, const Chunk& chunk, std::size_t offset) {
+    uint8_t constant = chunk.get_code().at(offset + 1);
+    printf("%-16s %4d '", name, constant);
+    printValue(chunk.get_constants().at(constant));
+    printf("'\n");
+    return offset + 2;
 }
