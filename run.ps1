@@ -12,10 +12,10 @@ try {
         # NOTE! /EHsc is included to silence warning C4530: 
         #       C++ exception handler used, but unwind semantics are not enabled. 
         #       Specify /EHsc
-        cl /EHsc ../src/main.cpp
+        cl /std:c++20 /EHsc ../src/*.cpp /link /out:pplox.exe
 
         Write-Host ""
-        ./main
+        ./pplox
     }
     finally {
         Pop-Location
