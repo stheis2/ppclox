@@ -1,7 +1,8 @@
 #include "chunk.hpp"
 
-void Chunk::write(std::uint8_t byte) {
+void Chunk::write(std::uint8_t byte, std::size_t line) {
     m_code.push_back(byte);
+    m_lines.push_back(line);
 }
 
 std::size_t Chunk::add_constant(Value value) {
@@ -19,6 +20,11 @@ void Chunk::dissassemble(const char* name) {
 
 std::size_t Chunk::disassemble_instruction(std::size_t offset) {
     printf("%04zu ", offset);
+    if (offset > 0 && m_lines.at(offset) == m_lines.at(offset - 1)) {
+        printf("   | ");
+    } else {
+        printf("%4zu ", m_lines.at(offset));
+    }
 
     std::uint8_t instruction = m_code.at(offset);
 
