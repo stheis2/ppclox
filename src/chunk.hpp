@@ -16,18 +16,19 @@ public:
     /** Append the constant to this chunk's constant array, returning it's index */
     std::size_t add_constant(Value value);
     void dissassemble(const char* name);
+    /** Disassemble the instruction at the given offset into the chunk's code vector */
+    std::size_t disassemble_instruction(std::size_t offset);
 
-    inline const std::vector<std::uint8_t> get_code() const { return m_code; };
-    inline const std::vector<std::size_t> get_lines() const { return m_lines; };
-    inline const std::vector<Value> get_constants() const { return m_constants; };
+    const std::vector<std::uint8_t>& get_code() { return m_code; };
+    const std::vector<std::size_t>& get_lines() { return m_lines; };
+    const std::vector<Value>& get_constants() { return m_constants; };
 private:
     std::vector<std::uint8_t> m_code{};
     std::vector<std::size_t> m_lines{};
     std::vector<Value> m_constants{};
-
-    std::size_t disassemble_instruction(std::size_t offset);
+    
     static std::size_t simple_instruction(const char* name, std::size_t offset);
-    static std::size_t constant_instruction(const char* name, const Chunk& chunk, std::size_t offset);
+    static std::size_t constant_instruction(const char* name, Chunk& chunk, std::size_t offset);
 };
 
 #endif

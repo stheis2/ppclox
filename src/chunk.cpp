@@ -45,7 +45,7 @@ std::size_t Chunk::simple_instruction(const char* name, std::size_t offset) {
     return offset + 1;
 }
 
-std::size_t Chunk::constant_instruction(const char* name, const Chunk& chunk, std::size_t offset) {
+std::size_t Chunk::constant_instruction(const char* name, Chunk& chunk, std::size_t offset) {
     uint8_t constant = chunk.get_code().at(offset + 1);
     printf("%-16s %4d '", name, constant);
     printValue(chunk.get_constants().at(constant));

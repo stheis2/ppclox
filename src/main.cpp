@@ -1,14 +1,20 @@
+#include <memory>
+
 #include "common.hpp"
 #include "chunk.hpp"
+#include "vm.hpp"
 
 int main(int argc, const char* argv[]) {
-    Chunk chunk{};
 
-    std::size_t constant_index = chunk.add_constant(1.2);
-    chunk.write(static_cast<std::uint8_t>(OpCode::CONSTANT), 123);
-    chunk.write(constant_index, 123);
+    auto chunk_ptr = std::make_shared<Chunk>();
 
-    chunk.write(static_cast<std::uint8_t>(OpCode::RETURN), 123);
-    chunk.dissassemble("test chunk");
+    std::size_t constant_index = chunk_ptr->add_constant(1.2);
+    chunk_ptr->write(static_cast<std::uint8_t>(OpCode::CONSTANT), 123);
+    chunk_ptr->write(constant_index, 123);
+
+    chunk_ptr->write(static_cast<std::uint8_t>(OpCode::RETURN), 123);
+    chunk_ptr->dissassemble("test chunk");
+    std::cout << std::endl;
+    g_vm.interpret(chunk_ptr);
     return 0;
 }
