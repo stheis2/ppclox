@@ -22,6 +22,11 @@ private:
     /** If non-null, this is a pointer into the chunk's code */
     /** @todo Is there any way to make this safer? Maybe not. */
     const std::uint8_t* m_ip{};
+    std::vector<Value> m_stack{};
+
+    void reset_stack();
+    void push(Value value);
+    Value pop();
 
     InterpretResult run();
 
