@@ -56,6 +56,30 @@ InterpretResult VM::run() {
                 this->push(constant);
                 break;
             }
+            case OpCode::ADD: {
+                Value b = pop();
+                Value a = pop();
+                push(a + b);
+                break;
+            }
+            case OpCode::SUBTRACT: {
+                Value b = pop();
+                Value a = pop();
+                push(a - b);
+                break;
+            }
+            case OpCode::MULTIPLY: {
+                Value b = pop();
+                Value a = pop();
+                push(a * b);
+                break;
+            }
+            case OpCode::DIVIDE: {
+                Value b = pop();
+                Value a = pop();
+                push(a / b);
+                break;
+            }
             case OpCode::NEGATE: {
                 push(-pop());
                 break;

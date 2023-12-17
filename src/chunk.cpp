@@ -32,6 +32,14 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
     switch (static_cast<OpCode>(instruction)) {
         case OpCode::CONSTANT:
             return Chunk::constant_instruction("OP_CONSTANT", *this, offset);
+        case OpCode::ADD:
+            return Chunk::simple_instruction("OP_ADD", offset);
+        case OpCode::SUBTRACT:
+            return Chunk::simple_instruction("OP_SUBTRACT", offset);
+        case OpCode::MULTIPLY:
+            return Chunk::simple_instruction("OP_MULTIPLY", offset);
+        case OpCode::DIVIDE:
+            return Chunk::simple_instruction("OP_DIVIDE", offset);            
         case OpCode::NEGATE:
             return Chunk::simple_instruction("OP_NEGATE", offset);
         case OpCode::RETURN:

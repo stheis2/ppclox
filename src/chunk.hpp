@@ -6,6 +6,10 @@
 
 enum class OpCode {
     CONSTANT,
+    ADD,
+    SUBTRACT,
+    MULTIPLY,
+    DIVIDE,
     NEGATE,
     RETURN
 };
