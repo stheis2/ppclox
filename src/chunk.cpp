@@ -29,21 +29,20 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
     std::uint8_t instruction = m_code.at(offset);
 
     // Static cast is safe since we have a default case
-//FIX - Switch to to_underlying once that's confirmed working.    
-    switch (static_cast<OpCode>(instruction)) {
-        case OpCode::CONSTANT:
+    switch (instruction) {
+        case std::to_underlying(OpCode::CONSTANT):
             return Chunk::constant_instruction("OP_CONSTANT", *this, offset);
-        case OpCode::ADD:
+        case std::to_underlying(OpCode::ADD):
             return Chunk::simple_instruction("OP_ADD", offset);
-        case OpCode::SUBTRACT:
+        case std::to_underlying(OpCode::SUBTRACT):
             return Chunk::simple_instruction("OP_SUBTRACT", offset);
-        case OpCode::MULTIPLY:
+        case std::to_underlying(OpCode::MULTIPLY):
             return Chunk::simple_instruction("OP_MULTIPLY", offset);
-        case OpCode::DIVIDE:
+        case std::to_underlying(OpCode::DIVIDE):
             return Chunk::simple_instruction("OP_DIVIDE", offset);            
-        case OpCode::NEGATE:
+        case std::to_underlying(OpCode::NEGATE):
             return Chunk::simple_instruction("OP_NEGATE", offset);
-        case OpCode::RETURN:
+        case std::to_underlying(OpCode::RETURN):
             return Chunk::simple_instruction("OP_RETURN", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
