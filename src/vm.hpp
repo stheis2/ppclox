@@ -5,6 +5,8 @@
 
 #include "chunk.hpp"
 
+#define VALUE_STACK_INIT_CAPACITY 256
+
 enum class InterpretResult {
     OK,
     COMPILE_ERROR,
@@ -20,7 +22,7 @@ public:
 private:
     std::shared_ptr<Chunk> m_chunk{};
     /** If non-null, this is a pointer into the chunk's code */
-    /** @todo Is there any way to make this safer? Maybe not. */
+    /** @todo Is there any way to make this safer? Maybe using an iterator? */
     const std::uint8_t* m_ip{};
     std::vector<Value> m_stack{};
 

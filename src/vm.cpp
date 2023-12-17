@@ -23,7 +23,7 @@ InterpretResult VM::interpret(std::shared_ptr<Chunk>& chunk) {
 
 void VM::reset_stack() {
     m_stack.clear(); 
-    m_stack.reserve(256);
+    m_stack.reserve(VALUE_STACK_INIT_CAPACITY);
 }
 
 void VM::push(Value value) {
