@@ -1,4 +1,5 @@
 #include "common.hpp"
+#include "compiler.hpp"
 #include "vm.hpp"
 
 // Global VM
@@ -7,18 +8,22 @@ VM g_vm;
 
 VM::VM() {
     // Set our initial capacities
-    this->reset_stack();
+    reset_stack();
 }
 VM::~VM() { }
 
 InterpretResult VM::interpret(const char* source) {
+    Compiler::compile(source);
+    return InterpretResult::OK;
+#if false
     m_chunk = chunk;
     m_ip = m_chunk->get_code().data();
-    InterpretResult result = this->run();
+    InterpretResult result = run();
     // Now that we are done with the chunk, reset our state to remove our reference to it
     m_chunk = nullptr;
     m_ip = nullptr;
     return result;
+#endif
 }
 
 void VM::reset_stack() {
@@ -47,13 +52,13 @@ InterpretResult VM::run() {
         printf("\n");
         m_chunk->disassemble_instruction((m_ip - m_chunk->get_code().data()));
 #endif
-        uint8_t instruction = this->read_byte();
+        uint8_t instruction = read_byte();
 
         // Static cast should be "safe" since we have a default clause
         switch (static_cast<OpCode>(instruction)) {
             case OpCode::CONSTANT: {
-                Value constant = this->read_constant();
-                this->push(constant);
+                Value constant = read_constant();
+                push(constant);
                 break;
             }
             case OpCode::ADD: {

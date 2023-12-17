@@ -9,12 +9,17 @@ void Compiler::compile(const char* source) {
     for (;;) {
         Token token = scanner.scan_token();
         if (token.line != line) {
-            printf("%4zu", token.line);
+            printf("%4zu ", token.line);
             line = token.line;
         } else {
             printf("   | ");
         }
-        printf("%2d '%.*s'\n", token.type, token.length, token.start);
+        if (token.length <= std::numeric_limits<int>::max()) {
+            printf("%2d '%.*s'\n", token.type, (int)token.length, token.start);
+        }
+        else {
+            printf("%2d %s\n", token.type, "Token too long to display.");
+        }
 
         if (token.type == TokenType::END_OF_FILE) break;
     }
