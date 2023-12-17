@@ -4,7 +4,7 @@
 #include "common.hpp"
 #include "value.hpp"
 
-enum class OpCode {
+enum class OpCode : std::uint8_t {
     CONSTANT,
     ADD,
     SUBTRACT,

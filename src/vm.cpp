@@ -1,9 +1,11 @@
+#include <memory>
+
 #include "common.hpp"
 #include "compiler.hpp"
 #include "vm.hpp"
 
 // Global VM
-// TODO: Refactor to make this not global
+// TODO: Refactor to make this not global somehow
 VM g_vm;
 
 VM::VM() {
@@ -13,17 +15,21 @@ VM::VM() {
 VM::~VM() { }
 
 InterpretResult VM::interpret(const char* source) {
-    Compiler::compile(source);
-    return InterpretResult::OK;
-#if false
-    m_chunk = chunk;
+    auto chunk_ptr = std::make_shared<Chunk>();
+
+    if (!Compiler::compile(source, chunk_ptr)) {
+        return InterpretResult::COMPILE_ERROR;
+    }
+
+    // If everything successfully compiles, assign this
+    // as our chunk, and start executing it.
+    m_chunk = chunk_ptr;
     m_ip = m_chunk->get_code().data();
     InterpretResult result = run();
     // Now that we are done with the chunk, reset our state to remove our reference to it
     m_chunk = nullptr;
     m_ip = nullptr;
     return result;
-#endif
 }
 
 void VM::reset_stack() {
@@ -54,42 +60,41 @@ InterpretResult VM::run() {
 #endif
         uint8_t instruction = read_byte();
 
-        // Static cast should be "safe" since we have a default clause
-        switch (static_cast<OpCode>(instruction)) {
-            case OpCode::CONSTANT: {
+        switch (instruction) {
+            case std::to_underlying(OpCode::CONSTANT): {
                 Value constant = read_constant();
                 push(constant);
                 break;
             }
-            case OpCode::ADD: {
+            case std::to_underlying(OpCode::ADD): {
                 Value b = pop();
                 Value a = pop();
                 push(a + b);
                 break;
             }
-            case OpCode::SUBTRACT: {
+            case std::to_underlying(OpCode::SUBTRACT): {
                 Value b = pop();
                 Value a = pop();
                 push(a - b);
                 break;
             }
-            case OpCode::MULTIPLY: {
+            case std::to_underlying(OpCode::MULTIPLY): {
                 Value b = pop();
                 Value a = pop();
                 push(a * b);
                 break;
             }
-            case OpCode::DIVIDE: {
+            case std::to_underlying(OpCode::DIVIDE): {
                 Value b = pop();
                 Value a = pop();
                 push(a / b);
                 break;
             }
-            case OpCode::NEGATE: {
+            case std::to_underlying(OpCode::NEGATE): {
                 push(-pop());
                 break;
             }
-            case OpCode::RETURN: {
+            case std::to_underlying(OpCode::RETURN): {
                 printValue(pop());
                 printf("\n");
                 return InterpretResult::OK;

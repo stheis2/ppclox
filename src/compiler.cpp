@@ -2,25 +2,233 @@
 #include "compiler.hpp"
 #include "scanner.hpp"
 
-void Compiler::compile(const char* source) {
-    // TODO: Can this live here or does it need to be global?
-    Scanner scanner(source);
-    std::size_t line = std::numeric_limits<std::size_t>::max();
-    for (;;) {
-        Token token = scanner.scan_token();
-        if (token.line != line) {
-            printf("%4zu ", token.line);
-            line = token.line;
-        } else {
-            printf("   | ");
-        }
+/** Zero initialize these to start */
+std::unique_ptr<Scanner> Compiler::s_scanner{};
+std::unique_ptr<Parser> Compiler::s_parser{};
+std::shared_ptr<Chunk> Compiler::s_current_chunk{};
+
+// NOTE! Unfortunately C++ doesn't support array initialization
+//       with enum indices, so we must resort to comments.
+//       Make sure any changes to the TokenType enum get reflected here!
+// TODO: Maybe switch to a map and generate the array at compilation start.
+ParseRule Compiler::s_rules[] = {
+    {grouping,    nullptr,   Precedence::NONE},   // [TokenType::LEFT_PAREN]
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::RIGHT_PAREN]
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::LEFT_BRACE]     
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::RIGHT_BRACE]   
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::COMMA]         
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::DOT]           
+    {unary,       binary,    Precedence::TERM},   // [TokenType::MINUS]         
+    {nullptr,     binary,    Precedence::TERM},   // [TokenType::PLUS]          
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::SEMICOLON]     
+    {nullptr,     binary,    Precedence::FACTOR}, // [TokenType::SLASH]         
+    {nullptr,     binary,    Precedence::FACTOR}, // [TokenType::STAR]          
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::BANG]          
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::BANG_EQUAL]    
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::EQUAL]         
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::EQUAL_EQUAL]   
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::GREATER]       
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::GREATER_EQUAL] 
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::LESS]          
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::LESS_EQUAL]    
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::IDENTIFIER]    
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::STRING]        
+    {number,      nullptr,   Precedence::NONE},   // [TokenType::NUMBER]        
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::AND]           
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::CLASS]         
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::ELSE]          
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::FALSE]         
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::FOR]           
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::FUN]           
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::IF]            
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::NIL]           
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::OR]            
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::PRINT]         
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::RETURN]        
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::SUPER]         
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::THIS]          
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::TRUE]          
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::VAR]           
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::WHILE]         
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::ERROR]         
+    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::END_OF_FILE]   
+};
+
+bool Compiler::compile(const char* source, const std::shared_ptr<Chunk>& chunk) {
+    // Create a scanner and parser we can use for this source
+    s_scanner = std::make_unique<Scanner>(source);
+    s_parser = std::make_unique<Parser>();
+
+    // Store our chunk while we operate on it
+    s_current_chunk = chunk;
+
+    advance();
+    expression();
+    consume(TokenType::END_OF_FILE, "Expect end of expression.");
+    end_compiler();
+    bool had_error = s_parser->had_error;
+
+    // Now that we are done compiling, destroy the scanner and parser,
+    // and release our reference to the chunk
+    s_scanner = nullptr;
+    s_parser = nullptr;
+    s_current_chunk = nullptr;
+
+    return !had_error;
+}
+
+void Compiler::error_at(const Token& token, const char* message) {
+    if (s_parser->panic_mode) return;
+    s_parser->panic_mode = true;
+    fprintf(stderr, "[line %zu] Error", token.line);
+
+    if (token.type == TokenType::END_OF_FILE) {
+        fprintf(stderr, " at end");
+    } else if (token.type == TokenType::ERROR) {
+        // Nothing, as the message will contain the info
+    } else {
         if (token.length <= std::numeric_limits<int>::max()) {
-            printf("%2d '%.*s'\n", token.type, (int)token.length, token.start);
+            fprintf(stderr, " at '%.*s'", (int)token.length, token.start);
         }
         else {
-            printf("%2d %s\n", token.type, "Token too long to display.");
+            fprintf(stderr, " at %s", "Token too long to display.");
         }
-
-        if (token.type == TokenType::END_OF_FILE) break;
     }
+
+    fprintf(stderr, ": %s\n", message);
+    s_parser->had_error = true;
+}
+
+void Compiler::error_at_current(const char* message) {
+    error_at(s_parser->current, message);
+}
+
+void Compiler::error(const char* message) {
+    error_at(s_parser->previous, message);
+}
+
+void Compiler::advance() {
+    s_parser->previous = s_parser->current;
+
+    for (;;) {
+        s_parser->current = s_scanner->scan_token();
+        if (s_parser->current.type != TokenType::ERROR) break;
+
+        // An error token will contain the error message to display
+        error_at_current(s_parser->current.start);
+    }
+}
+
+void Compiler::consume(TokenType type, const char* message) {
+    if (s_parser->current.type == type) {
+        advance();
+        return;
+    }
+
+    error_at_current(message);
+}
+
+void Compiler::emit_byte(std::uint8_t byte) {
+    current_chunk()->write(byte, s_parser->previous.line);
+}
+
+void Compiler::emit_opcode(OpCode op_code) {
+    emit_byte(std::to_underlying(op_code));
+}
+
+void Compiler::emit_opcode(OpCode op_code, std::uint8_t byte) {
+    emit_byte(std::to_underlying(op_code));
+    emit_byte(byte);
+}
+
+void Compiler::emit_return() {
+    return emit_opcode(OpCode::RETURN);
+}
+
+std::uint8_t Compiler::make_constant(Value value) {
+    std::size_t index = current_chunk()->add_constant(value);
+    if (index > std::numeric_limits<std::uint8_t>::max()) {
+        // NOTE! If this were a full-sized language implementation, we’d want to add another 
+        //       instruction like OP_CONSTANT_16 that stores the index as a two-byte operand 
+        //       so we could handle more constants when needed.
+        error("Too many constants in one chunk.");
+        return 0;
+    }
+    return (std::uint8_t)index;
+}
+
+void Compiler::emit_constant(Value value) {
+    emit_opcode(OpCode::CONSTANT, make_constant(value));
+}
+
+void Compiler::end_compiler() {
+    emit_return();
+#ifdef DEBUG_PRINT_CODE
+    if (!s_parser->had_error) {
+        current_chunk()->dissassemble("code");
+    }
+#endif    
+}
+
+void Compiler::parse_precedence(Precedence precedence) {
+    advance();
+    ParseFn prefix_rule = get_rule(s_parser->previous.type).prefix;
+    if (prefix_rule == nullptr) {
+        error("Expect expression. No prefix rule found in parse_precedence.");
+        return;
+    }
+
+    prefix_rule();
+
+    while (precedence <= get_rule(s_parser->current.type).precedence) {
+        advance();
+        ParseFn infix_rule = get_rule(s_parser->previous.type).infix;
+        infix_rule();
+    }
+}
+
+void Compiler::binary() {
+    TokenType operator_type = s_parser->previous.type;
+    ParseRule& rule = get_rule(operator_type);
+    parse_precedence(static_cast<Precedence>(std::to_underlying(rule.precedence) + 1));
+
+    switch (operator_type) {
+        case TokenType::PLUS:  emit_opcode(OpCode::ADD); break;
+        case TokenType::MINUS: emit_opcode(OpCode::SUBTRACT); break;
+        case TokenType::STAR:  emit_opcode(OpCode::MULTIPLY); break;
+        case TokenType::SLASH: emit_opcode(OpCode::DIVIDE); break;
+        default:
+            error("Unhandled operator type after compiling binary expressions.");
+            return;
+    }
+}
+
+void Compiler::grouping() {
+    expression();
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
+}
+
+void Compiler::number() {
+    double value = strtod(s_parser->previous.start, nullptr);
+    emit_constant(value);
+}
+
+void Compiler::unary() {
+    TokenType operator_type = s_parser->previous.type;
+
+    // Compile the operand
+    parse_precedence(Precedence::UNARY);
+
+    // Emit the operator instruction
+    switch (operator_type) {
+        case TokenType::MINUS: emit_opcode(OpCode::NEGATE); break;
+        default:
+            error("Unhandled operator type after compiling unary expression.");
+            return;
+    }
+}
+
+void Compiler::expression() {
+//TODO: Should this really be Precedence::NONE?
+    parse_precedence(Precedence::ASSIGNMENT);
 }

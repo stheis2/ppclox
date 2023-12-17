@@ -29,6 +29,7 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
     std::uint8_t instruction = m_code.at(offset);
 
     // Static cast is safe since we have a default case
+//FIX - Switch to to_underlying once that's confirmed working.    
     switch (static_cast<OpCode>(instruction)) {
         case OpCode::CONSTANT:
             return Chunk::constant_instruction("OP_CONSTANT", *this, offset);

@@ -6,6 +6,10 @@
 
 #include "common.hpp"
 
+// NOTE! Unfortunately C++ doesn't support array initialization
+//       with enum indices, so make sure any changes to the order
+//       or types here get reflected in the Compiler parse rules!
+// TODO: Maybe switch to a map and generate the array at compilation start.
 enum class TokenType {
     // Single-character tokens.
     LEFT_PAREN, RIGHT_PAREN,
