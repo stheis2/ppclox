@@ -12,6 +12,8 @@ int main(int argc, const char* argv[]) {
     chunk_ptr->write(static_cast<std::uint8_t>(OpCode::CONSTANT), 123);
     chunk_ptr->write(constant_index, 123);
 
+    chunk_ptr->write(static_cast<std::uint8_t>(OpCode::NEGATE), 123);
+
     chunk_ptr->write(static_cast<std::uint8_t>(OpCode::RETURN), 123);
     chunk_ptr->dissassemble("test chunk");
     std::cout << std::endl;

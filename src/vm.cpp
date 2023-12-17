@@ -56,6 +56,10 @@ InterpretResult VM::run() {
                 this->push(constant);
                 break;
             }
+            case OpCode::NEGATE: {
+                push(-pop());
+                break;
+            }
             case OpCode::RETURN: {
                 printValue(pop());
                 printf("\n");

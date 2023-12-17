@@ -6,6 +6,7 @@
 
 enum class OpCode {
     CONSTANT,
+    NEGATE,
     RETURN
 };
 
