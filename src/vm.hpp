@@ -18,7 +18,7 @@ public:
     VM();
     ~VM();
 
-    InterpretResult interpret(std::shared_ptr<Chunk>& chunk);
+    InterpretResult interpret(const char* source);
 private:
     std::shared_ptr<Chunk> m_chunk{};
     /** If non-null, this is a pointer into the chunk's code */

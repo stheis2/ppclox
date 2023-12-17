@@ -11,7 +11,7 @@ VM::VM() {
 }
 VM::~VM() { }
 
-InterpretResult VM::interpret(std::shared_ptr<Chunk>& chunk) {
+InterpretResult VM::interpret(const char* source) {
     m_chunk = chunk;
     m_ip = m_chunk->get_code().data();
     InterpretResult result = this->run();
