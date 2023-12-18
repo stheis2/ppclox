@@ -32,7 +32,7 @@ ParseRule Compiler::s_rules[] = {
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::LESS]          
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::LESS_EQUAL]    
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::IDENTIFIER]    
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::STRING]        
+    {string,      nullptr,   Precedence::NONE},   // [TokenType::STRING]        
     {number,      nullptr,   Precedence::NONE},   // [TokenType::NUMBER]        
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::AND]           
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::CLASS]         
@@ -224,6 +224,10 @@ void Compiler::grouping() {
 void Compiler::number() {
     double value = strtod(s_parser->previous.start, nullptr);
     emit_constant(value);
+}
+
+void Compiler::string() {
+
 }
 
 void Compiler::unary() {

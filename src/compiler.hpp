@@ -80,6 +80,7 @@ private:
     static void literal();
     static void grouping();
     static void number();
+    static void string();
     static void unary();
     static void expression();
 };
