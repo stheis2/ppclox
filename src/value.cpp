@@ -30,6 +30,9 @@ void Value::print() const {
         case ValueType::NUMBER:
             printf("%g", as_number());
             break;
+        case ValueType::OBJ:
+            as_obj()->print();
+            break;
         default:
             printf("Unhandled ValueType when printing Value");
             break;

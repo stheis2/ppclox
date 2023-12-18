@@ -1,6 +1,4 @@
-#include "common.hpp"
 #include "compiler.hpp"
-#include "scanner.hpp"
 
 /** Zero initialize these to start */
 std::unique_ptr<Scanner> Compiler::s_scanner{};
@@ -32,7 +30,7 @@ ParseRule Compiler::s_rules[] = {
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::LESS]          
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::LESS_EQUAL]    
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::IDENTIFIER]    
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::STRING]        
+    {string,      nullptr,   Precedence::NONE},   // [TokenType::STRING]        
     {number,      nullptr,   Precedence::NONE},   // [TokenType::NUMBER]        
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::AND]           
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::CLASS]         
@@ -224,6 +222,15 @@ void Compiler::grouping() {
 void Compiler::number() {
     double value = strtod(s_parser->previous.start, nullptr);
     emit_constant(value);
+}
+
+void Compiler::string() {
+    // Copy the chars between the ""
+    // NOTE! If Lox supported string escape sequences like \n, 
+    //       we’d translate those here. Since it doesn’t, we can 
+    //       take the characters as they are.
+    emit_constant(Value(ObjString::copy_string(s_parser->previous.start + 1, 
+        s_parser->previous.length - 2)));
 }
 
 void Compiler::unary() {
