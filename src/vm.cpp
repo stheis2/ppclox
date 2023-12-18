@@ -1,4 +1,5 @@
 #include <memory>
+#include <cstdarg>
 
 #include "common.hpp"
 #include "compiler.hpp"
@@ -37,14 +38,34 @@ void VM::reset_stack() {
     m_stack.reserve(VALUE_STACK_INIT_CAPACITY);
 }
 
+void VM::runtime_error(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+    fputs("\n", stderr);
+
+    // Get the instruction that was in the process of being executed
+    size_t instruction = m_ip - m_chunk->get_code().data() - 1;
+    int line = m_chunk->get_lines()[instruction];
+    fprintf(stderr, "[line %d] in script\n", line);
+    reset_stack();
+}
+
 void VM::push(Value value) {
     m_stack.push_back(value);
 }
 
 Value VM::pop() {
+    // TODO: Add bounds checking in debug builds?
     Value val = m_stack.back();
     m_stack.pop_back();
     return val;
+}
+
+Value VM::peek(std::size_t distance) {
+    // TODO: Add bounds checking in debug builds?
+    return m_stack[m_stack.size() - 1 - distance];
 }
 
 InterpretResult VM::run() {
@@ -52,7 +73,7 @@ InterpretResult VM::run() {
 #ifdef DEBUG_TRACE_EXECUTION
         for (auto value : m_stack) {
             printf("[ ");
-            printValue(value);
+            value.print();
             printf(" ]");
         }
         printf("\n");
@@ -67,35 +88,51 @@ InterpretResult VM::run() {
                 break;
             }
             case std::to_underlying(OpCode::ADD): {
-                Value b = pop();
-                Value a = pop();
+                if (!verify_binary_op_types()) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                double b = pop().as_number();
+                double a = pop().as_number();
                 push(a + b);
                 break;
             }
             case std::to_underlying(OpCode::SUBTRACT): {
-                Value b = pop();
-                Value a = pop();
+                if (!verify_binary_op_types()) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                double b = pop().as_number();
+                double a = pop().as_number();
                 push(a - b);
                 break;
             }
             case std::to_underlying(OpCode::MULTIPLY): {
-                Value b = pop();
-                Value a = pop();
+                if (!verify_binary_op_types()) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                double b = pop().as_number();
+                double a = pop().as_number();
                 push(a * b);
                 break;
             }
             case std::to_underlying(OpCode::DIVIDE): {
-                Value b = pop();
-                Value a = pop();
+                if (!verify_binary_op_types()) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                double b = pop().as_number();
+                double a = pop().as_number();
                 push(a / b);
                 break;
             }
             case std::to_underlying(OpCode::NEGATE): {
-                push(-pop());
+                if (!peek(0).is_number()) {
+                    runtime_error("Operand must be a number.");
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                push(-pop().as_number());
                 break;
             }
             case std::to_underlying(OpCode::RETURN): {
-                printValue(pop());
+                pop().print();
                 printf("\n");
                 return InterpretResult::OK;
             }
@@ -104,4 +141,12 @@ InterpretResult VM::run() {
                 return InterpretResult::RUNTIME_ERROR;
         }
     }
+}
+
+bool VM::verify_binary_op_types() {
+    if (!peek(0).is_number() || !peek(1).is_number()) {
+        runtime_error("Operands must be numbers.");
+        return false;
+    }
+    return true;
 }

@@ -27,8 +27,10 @@ private:
     std::vector<Value> m_stack{};
 
     void reset_stack();
+    void runtime_error(const char* format, ...);
     void push(Value value);
     Value pop();
+    Value peek(std::size_t distance);
 
     InterpretResult run();
 
@@ -41,6 +43,7 @@ private:
      * important that the compiled code produce correct, in-bound indexes.
      */
     Value read_constant() { return m_chunk->get_constants()[this->read_byte()]; }
+    bool verify_binary_op_types();
 };
 
 // Exposes the global g_vm variable from vm.cpp
