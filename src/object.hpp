@@ -31,22 +31,10 @@ private:
 
 class InternedStringKey {
 public:
-//FIX - Move this to CPP file.
-    bool operator==(const InternedStringKey& key) const {
-        // Thanks to de-duping as well as the way these keys are used, 
-        // ObjString* pointers indicate equivalent objects
-        if (this->m_obj_string != nullptr && key.m_obj_string != nullptr) {
-            return this->m_obj_string == key.m_obj_string;
-        }
+    bool operator==(const InternedStringKey& key) const;
 
-        // If the hashes differ, we know we are different
-        if (this->m_hash != key.m_hash) {
-            return false;
-        }
-
-        // If hashes are the same, we must compare strings directly
-        return this->m_string_view == key.m_string_view;
-    }
+    InternedStringKey(Obj* obj);
+    InternedStringKey(std::string_view string_view);
 
     // TODO: Need to add constructors that make sense for this type.
     // Constructors must compute a hash, unless its been cached somewhere (e.g.
@@ -98,8 +86,12 @@ public:
     ~ObjString();
 private:
     const std::string m_string{};
+//FIX - Need to cache the hash for later    
+    //const std::size_t m_hash{};
 
-    ObjString(const char* chars, std::size_t length) : Obj(ObjType::STRING), m_string(std::move(std::string(chars, length))) { }
+    ObjString(const char* chars, std::size_t length) : 
+        Obj(ObjType::STRING), 
+        m_string(std::move(std::string(chars, length))) { }
     ObjString(std::string&& text) : Obj(ObjType::STRING), m_string(std::move(text)) {}
 
     static ObjString* find_existing(const char* chars, std::size_t length);

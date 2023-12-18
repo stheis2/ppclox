@@ -4,6 +4,30 @@ void Obj::print() const {
     printf("Object: %d", m_type);
 }
 
+bool InternedStringKey::operator==(const InternedStringKey& key) const {
+    // Thanks to de-duping as well as the way these keys are used, 
+    // ObjString* pointers indicate equivalent objects
+    if (this->m_obj_string != nullptr && key.m_obj_string != nullptr) {
+        return this->m_obj_string == key.m_obj_string;
+    }
+
+    // If the hashes differ, we know we are different
+    if (this->m_hash != key.m_hash) {
+        return false;
+    }
+
+    // If hashes are the same, we must compare strings directly
+    return this->m_string_view == key.m_string_view;
+}
+
+InternedStringKey::InternedStringKey(Obj* obj) {
+    // TODO: Populate from the obj
+}
+
+InternedStringKey::InternedStringKey(std::string_view string_view) {
+    // TODO: Hash the string
+}
+
 // Initialize map to empty
 std::unordered_map<std::string_view, ObjString*> ObjString::s_interned_strings{};
 
