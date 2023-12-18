@@ -1,6 +1,4 @@
-#include "common.hpp"
 #include "compiler.hpp"
-#include "scanner.hpp"
 
 /** Zero initialize these to start */
 std::unique_ptr<Scanner> Compiler::s_scanner{};
@@ -227,7 +225,12 @@ void Compiler::number() {
 }
 
 void Compiler::string() {
-
+    // Copy the chars between the ""
+    // NOTE! If Lox supported string escape sequences like \n, 
+    //       we’d translate those here. Since it doesn’t, we can 
+    //       take the characters as they are.
+    emit_constant(Value(ObjString::copy_string(s_parser->previous.start + 1, 
+        s_parser->previous.length - 2)));
 }
 
 void Compiler::unary() {

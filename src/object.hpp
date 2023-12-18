@@ -15,50 +15,46 @@ enum class ObjType {
 class Obj {
 public:
     ObjType type() const { return m_type; }
+
+    virtual void print() const;
+protected:
+    Obj(ObjType type) : m_type(type) {}
 private:
     ObjType m_type{};
 
-//TODO: Implement custom new and delete for objs?    
+//TODO: Implement custom new and delete for objs? And how do we account for the ObjStrings
+// memory?   
 };
 
-class ObjString : Obj {
+class ObjString : public Obj {
 public:
+    void print() const override;
+
     /** 
      * Return an ObjString representing the given string, copying it if necessary
      * (e.g. not taking ownership)
     */
-    ObjString* copy_string(const char* chars, std::size_t length) {
-
-    }
+    static ObjString* copy_string(const char* chars, std::size_t length);
 
     /** 
-     * Return an ObjString representing the given string, taking ownership of it.
-     * The returned ObjString may or may not use the actual given chars, though
-     * they are guaranteed to be freed once no longer used.
+     * Return an ObjString representing the given (moved) string.
     */
-    ObjString* take_string(const char* chars, std::size_t length) {
+    static ObjString* take_string(std::string&& text);
 
-    }
-
-    const char* chars() { return m_chars; }
+    const std::size_t length() { return m_string.size(); }
+    const char* chars() const { return m_string.c_str(); }
 private:
-    std::size_t m_length{};
-    const char* m_chars{};
+    const std::string m_string{};
 
-    ObjString(const char* chars, std::size_t length) {
+    ObjString(const char* chars, std::size_t length) : Obj(ObjType::STRING), m_string(std::move(std::string(chars, length))) { }
+    ObjString(std::string&& text) : Obj(ObjType::STRING), m_string(std::move(text)) {}
 
-    }
+    static ObjString* find_existing(const char* chars, std::size_t length);
+    static ObjString* find_existing(std::string_view search);
+    static void store_new(ObjString* str);
 
-    ~ObjString() {
-
-    }
-
-
-    /** Map containing the actual interned string data */
-    /** TODO: Investigate storing std::string in the map directly instead of a ptr? */
-    static std::unordered_map<const std::string_view, std::shared_ptr<const std::string>> s_interned_strings;
-    /** Map interned string data to ObjString referring to it */
-    static std::unordered_map<const char*, ObjString*> s_obj_strings;
+    /** Map used for de-deping ObjStrings */
+    static std::unordered_map<std::string_view, ObjString*> s_interned_strings;
 };
 
 #endif

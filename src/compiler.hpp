@@ -3,8 +3,10 @@
 
 #include <memory>
 
+#include "common.hpp"
 #include "chunk.hpp"
 #include "scanner.hpp"
+#include "object.hpp"
 
 class Parser {
 public:
