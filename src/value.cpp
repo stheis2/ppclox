@@ -14,6 +14,11 @@ Value::Value(double val) {
     m_as.number = val;
 }
 
+Value::Value(Obj* obj) {
+    m_type = ValueType::OBJ;
+    m_as.obj = obj;
+}
+
 void Value::print() const {
     switch (m_type) {
         case ValueType::BOOL:
