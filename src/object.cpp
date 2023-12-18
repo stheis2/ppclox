@@ -11,6 +11,14 @@ void ObjString::print() const {
     printf("%s", chars());
 }
 
+ObjString::~ObjString() {
+    // Upon destruction, we need to clean ourselves out of the map
+//FIX - This has to hash the string again to find it. Can we avoid re-hashing
+//      via a custom key object that caches the hash???
+//FIX - should probably protect this with a lock so these can be used across threads 
+    s_interned_strings.erase(std::string_view(this->chars(), this->length()));
+}
+
 ObjString* ObjString::copy_string(const char* chars, std::size_t length) {
 //FIX - should probably protect this with a lock so these can be used across threads    
     ObjString* existing = find_existing(chars, length);

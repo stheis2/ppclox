@@ -17,6 +17,8 @@ public:
     ObjType type() const { return m_type; }
 
     virtual void print() const;
+
+//FIX - Do we need a virtual destructor?    
 protected:
     Obj(ObjType type) : m_type(type) {}
 private:
@@ -43,6 +45,8 @@ public:
 
     const std::size_t length() { return m_string.size(); }
     const char* chars() const { return m_string.c_str(); }
+
+    ~ObjString();
 private:
     const std::string m_string{};
 
