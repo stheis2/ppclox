@@ -32,6 +32,12 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
     switch (instruction) {
         case std::to_underlying(OpCode::CONSTANT):
             return Chunk::constant_instruction("OP_CONSTANT", *this, offset);
+        case std::to_underlying(OpCode::NIL):
+            return Chunk::simple_instruction("OP_NIL", offset);            
+        case std::to_underlying(OpCode::TRUE):
+            return Chunk::simple_instruction("OP_TRUE", offset);            
+        case std::to_underlying(OpCode::FALSE):
+            return Chunk::simple_instruction("OP_FALSE", offset);            
         case std::to_underlying(OpCode::ADD):
             return Chunk::simple_instruction("OP_ADD", offset);
         case std::to_underlying(OpCode::SUBTRACT):

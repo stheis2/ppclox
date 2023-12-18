@@ -6,6 +6,9 @@
 
 enum class OpCode : std::uint8_t {
     CONSTANT,
+    NIL,
+    TRUE,
+    FALSE,
     ADD,
     SUBTRACT,
     MULTIPLY,

@@ -15,6 +15,18 @@ Value::Value(double val) {
 }
 
 void Value::print() const {
-    //FIX - Need to handle non-number values
-    printf("%g", as_number());
+    switch (m_type) {
+        case ValueType::BOOL:
+            printf(as_bool() ? "true" : "false");
+            break;
+        case ValueType::NIL:
+            printf("nil");
+            break;
+        case ValueType::NUMBER:
+            printf("%g", as_number());
+            break;
+        default:
+            printf("Unhandled ValueType when printing Value");
+            break;
+    }
 }

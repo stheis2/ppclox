@@ -87,6 +87,9 @@ InterpretResult VM::run() {
                 push(constant);
                 break;
             }
+            case std::to_underlying(OpCode::NIL): push(Value()); break;
+            case std::to_underlying(OpCode::TRUE): push(Value(true)); break;
+            case std::to_underlying(OpCode::FALSE): push(Value(false)); break;
             case std::to_underlying(OpCode::ADD): {
                 if (!verify_binary_op_types()) {
                     return InterpretResult::RUNTIME_ERROR;

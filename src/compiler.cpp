@@ -37,17 +37,17 @@ ParseRule Compiler::s_rules[] = {
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::AND]           
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::CLASS]         
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::ELSE]          
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::FALSE]         
+    {literal,     nullptr,   Precedence::NONE},   // [TokenType::FALSE]         
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::FOR]           
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::FUN]           
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::IF]            
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::NIL]           
+    {literal,     nullptr,   Precedence::NONE},   // [TokenType::NIL]           
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::OR]            
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::PRINT]         
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::RETURN]        
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::SUPER]         
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::THIS]          
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::TRUE]          
+    {literal,     nullptr,   Precedence::NONE},   // [TokenType::TRUE]          
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::VAR]           
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::WHILE]         
     {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::ERROR]         
@@ -198,7 +198,20 @@ void Compiler::binary() {
         case TokenType::STAR:  emit_opcode(OpCode::MULTIPLY); break;
         case TokenType::SLASH: emit_opcode(OpCode::DIVIDE); break;
         default:
+            // Should be unreachable
             error("Unhandled operator type after compiling binary expressions.");
+            return;
+    }
+}
+
+void Compiler::literal() {
+    switch (s_parser->previous.type) {
+        case TokenType::FALSE: emit_opcode(OpCode::FALSE); break;
+        case TokenType::NIL: emit_opcode(OpCode::NIL); break;
+        case TokenType::TRUE: emit_opcode(OpCode::TRUE); break;
+        default:
+            // Should be unreachable
+            error("Unhandled token type for literal.");
             return;
     }
 }

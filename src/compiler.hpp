@@ -77,6 +77,7 @@ private:
 
     static void parse_precedence(Precedence precedence);
     static void binary();
+    static void literal();
     static void grouping();
     static void number();
     static void unary();
