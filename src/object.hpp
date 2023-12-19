@@ -29,6 +29,9 @@ private:
 // memory?   
 };
 
+// Forward declare this to appease the compiler
+class ObjString;
+
 class InternedStringKey {
 public:
     bool operator==(const InternedStringKey& key) const;
