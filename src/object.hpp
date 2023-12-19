@@ -100,8 +100,8 @@ private:
     const std::size_t m_hash{};
 
     ObjString(const char* chars, std::size_t length, std::size_t hash) : 
-        Obj(ObjType::STRING), 
-        m_string(std::move(std::string(chars, length))),
+        Obj(ObjType::STRING),       
+        m_string(chars, length),
         m_hash(hash) { }
     ObjString(std::string&& text, std::size_t hash) : 
         Obj(ObjType::STRING), 
