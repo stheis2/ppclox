@@ -33,7 +33,9 @@ class InternedStringKey {
 public:
     bool operator==(const InternedStringKey& key) const;
 
-    InternedStringKey(Obj* obj);
+    /** Construct key for storing or searching. This will utilize cached hash. */
+    InternedStringKey(ObjString* obj);
+    /** Construct key for searching only. This will hash the string. */
     InternedStringKey(std::string_view string_view);
 
     // TODO: Need to add constructors that make sense for this type.
@@ -80,19 +82,27 @@ public:
     */
     static ObjString* take_string(std::string&& text);
 
-    const std::size_t length() { return m_string.size(); }
+    std::size_t length() const { return m_string.size(); }
     const char* chars() const { return m_string.c_str(); }
+    std::size_t hash() const { return m_hash; }
 
     ~ObjString();
 private:
     const std::string m_string{};
-//FIX - Need to cache the hash for later    
-    //const std::size_t m_hash{};
+    /** 
+     * NOTE! Be sure to list this after m_string so it gets initialized after!
+     * See https://stackoverflow.com/questions/1242830/what-is-the-order-of-evaluation-in-a-member-initializer-list
+    */ 
+    const std::size_t m_hash{};
 
     ObjString(const char* chars, std::size_t length) : 
         Obj(ObjType::STRING), 
-        m_string(std::move(std::string(chars, length))) { }
-    ObjString(std::string&& text) : Obj(ObjType::STRING), m_string(std::move(text)) {}
+        m_string(std::move(std::string(chars, length))),
+        m_hash(std::hash<std::string_view>()(std::string_view(chars, length))) { }
+    ObjString(std::string&& text) : 
+        Obj(ObjType::STRING), 
+        m_string(std::move(text)),
+        m_hash(std::hash<std::string_view>()(m_string)) {}
 
     static ObjString* find_existing(const char* chars, std::size_t length);
     static ObjString* find_existing(std::string_view search);

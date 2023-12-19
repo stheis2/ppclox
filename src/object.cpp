@@ -20,12 +20,16 @@ bool InternedStringKey::operator==(const InternedStringKey& key) const {
     return this->m_string_view == key.m_string_view;
 }
 
-InternedStringKey::InternedStringKey(Obj* obj) {
-    // TODO: Populate from the obj
+InternedStringKey::InternedStringKey(ObjString* obj) {
+    m_string_view = std::string_view(obj->chars(), obj->length());
+    m_obj_string = obj;
+    m_hash = obj->hash();
 }
 
 InternedStringKey::InternedStringKey(std::string_view string_view) {
-    // TODO: Hash the string
+    m_string_view = string_view;
+    m_obj_string = nullptr;
+    m_hash = std::hash<std::string_view>()(string_view);
 }
 
 // Initialize map to empty
