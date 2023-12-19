@@ -41,10 +41,6 @@ public:
     /** Construct key for searching only. This will hash the string. */
     InternedStringKey(std::string_view string_view);
 
-    // TODO: Need to add constructors that make sense for this type.
-    // Constructors must compute a hash, unless its been cached somewhere (e.g.
-    // on the ObjString).
-
     const std::string_view string_view() const { return m_string_view; }
     const ObjString* obj_string() const  { return m_obj_string; }
     std::size_t hash() const { return m_hash; }
