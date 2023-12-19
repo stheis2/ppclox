@@ -63,6 +63,7 @@ private:
 // Function object that knows how to hash InternedStringKey
 // See method 3 at https://marknelson.us/posts/2011/09/03/hash-functions-for-c-unordered-containers.html
 class InternedStringKeyHash {
+public:    
     size_t operator()(const InternedStringKey& key) const
     {
         //return std::hash<std::string_view>()(key.m_string_view);
@@ -98,21 +99,20 @@ private:
     */ 
     const std::size_t m_hash{};
 
-    ObjString(const char* chars, std::size_t length) : 
+    ObjString(const char* chars, std::size_t length, std::size_t hash) : 
         Obj(ObjType::STRING), 
         m_string(std::move(std::string(chars, length))),
-        m_hash(std::hash<std::string_view>()(std::string_view(chars, length))) { }
-    ObjString(std::string&& text) : 
+        m_hash(hash) { }
+    ObjString(std::string&& text, std::size_t hash) : 
         Obj(ObjType::STRING), 
         m_string(std::move(text)),
-        m_hash(std::hash<std::string_view>()(m_string)) {}
+        m_hash(hash) {}
 
-    static ObjString* find_existing(const char* chars, std::size_t length);
-    static ObjString* find_existing(std::string_view search);
+    static ObjString* find_existing(const InternedStringKey& search);
     static void store_new(ObjString* str);
 
     /** Map used for de-deping ObjStrings */
-    static std::unordered_map<std::string_view, ObjString*> s_interned_strings;
+    static std::unordered_map<InternedStringKey, ObjString*, InternedStringKeyHash> s_interned_strings;
 };
 
 #endif

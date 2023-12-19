@@ -5,8 +5,8 @@ void Obj::print() const {
 }
 
 bool InternedStringKey::operator==(const InternedStringKey& key) const {
-    // Thanks to de-duping as well as the way these keys are used, 
-    // ObjString* pointers indicate equivalent objects
+    // Thanks to de-duping of the ObjStrings,
+    // equal ObjString* pointers indicate equivalent objects
     if (this->m_obj_string != nullptr && key.m_obj_string != nullptr) {
         return this->m_obj_string == key.m_obj_string;
     }
@@ -33,47 +33,51 @@ InternedStringKey::InternedStringKey(std::string_view string_view) {
 }
 
 // Initialize map to empty
-std::unordered_map<std::string_view, ObjString*> ObjString::s_interned_strings{};
+std::unordered_map<InternedStringKey, ObjString*, InternedStringKeyHash> ObjString::s_interned_strings{};
 
 void ObjString::print() const {
     printf("%s", chars());
 }
 
 ObjString::~ObjString() {
+    // Construct the search key we will use to find ourselves in the map
+    InternedStringKey search(this);
     // Upon destruction, we need to clean ourselves out of the map
-//FIX - This has to hash the string again to find it. Can we avoid re-hashing
-//      via a custom key object that caches the hash???
 //FIX - should probably protect this with a lock so these can be used across threads 
-    s_interned_strings.erase(std::string_view(this->chars(), this->length()));
+    s_interned_strings.erase(search);
 }
 
 ObjString* ObjString::copy_string(const char* chars, std::size_t length) {
-//FIX - should probably protect this with a lock so these can be used across threads    
-    ObjString* existing = find_existing(chars, length);
+    // Construct search key. Note that this will hash the string.
+    InternedStringKey search(std::string_view(chars, length));
+
+//FIX - should probably protect this with a lock so these can be used across threads      
+
+    ObjString* existing = find_existing(search);
     if (existing != nullptr) return existing;
 
     // If it doesn't already exist, we need a new one
-    ObjString* str = new ObjString(chars, length);
+    ObjString* str = new ObjString(chars, length, search.hash());
     store_new(str);
     return str;
 }
 
 ObjString* ObjString::take_string(std::string&& text) {
+    // Construct search key. Note that this will hash the string.
+    InternedStringKey search{std::string_view(text)};
+
 //FIX - should probably protect this with a lock so these can be used across threads    
-    ObjString* existing = find_existing(text);
+
+    ObjString* existing = find_existing(search);
     if (existing != nullptr) return existing;
 
     // If it doesn't already exist, we need a new one
-    ObjString* str = new ObjString(std::move(text));
+    ObjString* str = new ObjString(std::move(text), search.hash());
     store_new(str);
     return str;
 }
 
-ObjString* ObjString::find_existing(const char* chars, std::size_t length) {
-    return find_existing(std::string_view(chars, length));
-}
-
-ObjString* ObjString::find_existing(std::string_view search) {
+ObjString* ObjString::find_existing(const InternedStringKey& search) {
     auto it = s_interned_strings.find(search);
     if (it != s_interned_strings.end()) {
         return it->second;
@@ -82,5 +86,7 @@ ObjString* ObjString::find_existing(std::string_view search) {
 }
 
 void ObjString::store_new(ObjString* str) {
-    s_interned_strings[std::string_view(str->chars(), str->length())] = str;
+    // Construct the key we will use to find ourselves in the map later
+    InternedStringKey key(str);
+    s_interned_strings[key] = str;
 }
