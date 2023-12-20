@@ -4,6 +4,15 @@ void Obj::print() const {
     printf("Object: %d", m_type);
 }
 
+void* Obj::operator new(std::size_t size) {
+    return ::operator new(size);
+}
+
+void Obj::operator delete(void *memory) {
+    ::operator delete(memory);
+}
+
+
 bool InternedStringKey::operator==(const InternedStringKey& key) const {
     // Thanks to de-duping of the ObjStrings,
     // equal ObjString* pointers indicate equivalent objects

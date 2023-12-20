@@ -19,6 +19,10 @@ public:
 
     virtual void print() const;
 
+    //https://azrael.digipen.edu/~mmead/www/Courses/CS225/OverloadingNewDelete.html#:~:text=You%20cannot%20overload%20the%20new,compiler)%20and%20cannot%20be%20changed.
+    static void* operator new(size_t size);
+    static void operator delete(void *memory);
+
 //FIX - Do we need a virtual destructor?    
 protected:
     Obj(ObjType type) : m_type(type) {}
