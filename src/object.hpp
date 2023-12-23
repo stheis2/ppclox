@@ -136,13 +136,31 @@ private:
     static std::unordered_map<InternedStringKey, ObjString*, InternedStringKeyHash> s_interned_strings;
 };
 
-// Function object that knows how to hash ObjString
+/** 
+ * Reference to an ObjString that can be used as a key in a hash map.
+ * Stores a pointer to an ObjString so the object is only valid as long
+ * as the ObjString it refers to is.
+ */
+class ObjStringRef {
+public:
+    ObjStringRef(ObjString* obj_string) : m_obj_string(obj_string) {}
+    ObjString* obj_string() const { return m_obj_string; }
+
+    bool operator==(const ObjStringRef& key) {
+        /** Thanks to ObjString de-duping, two ObjStrings are equal exactly when their pointers are equal. */
+        return m_obj_string == key.m_obj_string;
+    }
+private:
+    ObjString* m_obj_string{};
+};
+
+// Function object that knows how to hash ObjStringRef
 // See method 3 at https://marknelson.us/posts/2011/09/03/hash-functions-for-c-unordered-containers.html
-class ObjStringHash {
+class ObjStringRefHash {
 public:    
-    size_t operator()(const ObjString& obj_string) const
+    size_t operator()(const ObjStringRef& obj_string_ref) const
     {
-        return obj_string.hash();
+        return obj_string_ref.obj_string()->hash();
     }
 };
 

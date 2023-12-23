@@ -25,6 +25,7 @@ private:
     /** @todo Is there any way to make this safer? Maybe using an iterator? */
     const std::uint8_t* m_ip{};
     std::vector<Value> m_stack{};
+    std::unordered_map<ObjStringRef, Value, ObjStringRefHash> m_globals{};
 
     void reset_stack();
     void runtime_error(const char* format, ...);
