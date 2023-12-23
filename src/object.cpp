@@ -12,9 +12,6 @@ void* Obj::operator new(std::size_t size) {
     Obj* obj = static_cast<Obj*>(ptr);
     obj->m_next = s_objects_head;
     s_objects_head = obj;
-    std::cerr << "Allocating new obj with size: " << size << " " << s_objects_head << " " << obj->m_next << std::endl;
-    std::cerr << "Size of Obj: " << sizeof(Obj) << std::endl;
-    std::cerr << "Size of ObjString: " << sizeof(ObjString) << std::endl;
     return ptr;;
 }
 
@@ -26,7 +23,6 @@ void Obj::free_objects() {
     Obj* object = s_objects_head;
     while (object != nullptr) {
         Obj* next = object->m_next;
-        std::cerr << "Deleting pointer: " << object << ". Next: " << next << std::endl;
         delete object;
         object = next;
     }
@@ -37,23 +33,19 @@ Obj* Obj::s_objects_head{};
 
 
 bool InternedStringKey::operator==(const InternedStringKey& key) const {
-    std::cerr << "Comparing interned string keys" << std::endl;
 
     // Thanks to de-duping of the ObjStrings,
     // equal ObjString* pointers indicate equivalent objects
     if (this->m_obj_string != nullptr && key.m_obj_string != nullptr) {
-        std::cerr << "Fast path compare 1" << std::endl;
         return this->m_obj_string == key.m_obj_string;
     }
 
     // If the hashes differ, we know we are different
     if (this->m_hash != key.m_hash) {
-        std::cerr << "Fast path bail 2" << std::endl;
         return false;
     }
 
     // If hashes are the same, we must compare strings directly
-    std::cerr << "Slow path" << std::endl;
     return this->m_string_view == key.m_string_view;
 }
 
@@ -77,13 +69,11 @@ void ObjString::print() const {
 }
 
 ObjString::~ObjString() {
-    std::cerr << "Destructing ObjString..." << std::endl;
     // Construct the search key we will use to find ourselves in the map
     InternedStringKey search(this);
     // Upon destruction, we need to clean ourselves out of the map
 //FIX - should probably protect this with a lock so these can be used across threads 
     s_interned_strings.erase(search);
-    std::cerr << "Destructing ObjString done. Interned string size: " << s_interned_strings.size() << std::endl;
 }
 
 ObjString* ObjString::copy_string(const char* chars, std::size_t length) {
@@ -134,6 +124,4 @@ void ObjString::store_new(ObjString* str) {
     // Construct the key we will use to find ourselves in the map later
     InternedStringKey key(str);
     s_interned_strings[key] = str;
-
-    std::cerr << "Stored new string. Interned string size: " << s_interned_strings.size() << std::endl;
 }

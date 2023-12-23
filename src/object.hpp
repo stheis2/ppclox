@@ -27,9 +27,7 @@ public:
     static void free_objects();
 
     /** Virtual destructor ensures that deleting through base pointer will call derived destructors */
-    virtual ~Obj() {
-        std::cerr << "Destructing Obj" << std::endl;
-    }
+    virtual ~Obj() {}
 
 protected:
     Obj(ObjType type) : m_type(type) {}
@@ -83,8 +81,6 @@ class InternedStringKeyHash {
 public:    
     size_t operator()(const InternedStringKey& key) const
     {
-        std::cerr << "Returning cached hash for interned string key" << std::endl;
-        //return std::hash<std::string_view>()(key.m_string_view);
         return key.hash();
     }
 };
