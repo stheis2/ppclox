@@ -44,6 +44,7 @@ private:
      * important that the compiled code produce correct, in-bound indexes.
      */
     Value read_constant() { return m_chunk->get_constants()[this->read_byte()]; }
+    ObjString* read_string() { return read_constant().as_string(); }
     bool verify_binary_op_types();
 };
 

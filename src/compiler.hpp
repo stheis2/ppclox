@@ -77,10 +77,13 @@ private:
     static void emit_return();
     /** Add constant to the current chunk and return its index */
     static std::uint8_t make_constant(Value value);
+    static std::uint8_t identifier_constant(const Token& name);
     static void emit_constant(Value value);
     static void end_compiler();
 
     static void parse_precedence(Precedence precedence);
+    static std::uint8_t parse_variable(const char* error_message);
+    static void define_variable(std::uint8_t global);
     static void binary();
     static void literal();
     static void grouping();
@@ -90,6 +93,7 @@ private:
     static void expression();
     static void declaration();
     static void statement();
+    static void var_declaration();
     static void print_statement();
     static void expression_statement();
 };

@@ -146,7 +146,7 @@ public:
     ObjStringRef(ObjString* obj_string) : m_obj_string(obj_string) {}
     ObjString* obj_string() const { return m_obj_string; }
 
-    bool operator==(const ObjStringRef& key) {
+    bool operator==(const ObjStringRef& key) const {
         /** Thanks to ObjString de-duping, two ObjStrings are equal exactly when their pointers are equal. */
         return m_obj_string == key.m_obj_string;
     }

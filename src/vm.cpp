@@ -91,6 +91,16 @@ InterpretResult VM::run() {
             case std::to_underlying(OpCode::TRUE): push(Value(true)); break;
             case std::to_underlying(OpCode::FALSE): push(Value(false)); break;
             case std::to_underlying(OpCode::POP): pop(); break;
+            case std::to_underlying(OpCode::DEFINE_GLOBAL): {
+                ObjString* name = read_string();
+                // NOTE! Peek/pop was done in the C implementation
+                // out of worry that GC might be triggered
+                // by the hash table insert. That shouldn't
+                // be an issue here since resizing of the
+                // globals hash table is independent of our GC.
+                m_globals[ObjStringRef(name)] = pop();
+                break;
+            }
             case std::to_underlying(OpCode::EQUAL): {
                 Value b = pop();
                 Value a = pop();

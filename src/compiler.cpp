@@ -193,9 +193,15 @@ std::uint8_t Compiler::make_constant(Value value) {
     return (std::uint8_t)index;
 }
 
+std::uint8_t Compiler::identifier_constant(const Token& name) {
+    return make_constant(ObjString::copy_string(name.start, name.length));
+}
+
 void Compiler::emit_constant(Value value) {
     emit_opcode(OpCode::CONSTANT, make_constant(value));
 }
+
+
 
 void Compiler::end_compiler() {
     emit_return();
@@ -222,6 +228,16 @@ void Compiler::parse_precedence(Precedence precedence) {
         infix_rule();
     }
 }
+
+std::uint8_t Compiler::parse_variable(const char* error_message) {
+    consume(TokenType::IDENTIFIER, error_message);
+    return identifier_constant(s_parser->previous);
+}
+
+void Compiler::define_variable(std::uint8_t global) {
+    emit_opcode(OpCode::DEFINE_GLOBAL, global);
+}
+
 
 void Compiler::binary() {
     TokenType operator_type = s_parser->previous.type;
@@ -311,7 +327,11 @@ void Compiler::expression() {
 }
 
 void Compiler::declaration() {
-    statement();
+    if (match(TokenType::VAR)) {
+        var_declaration();
+    } else {
+        statement();
+    }
 
     if (s_parser->panic_mode) synchronize();
 }
@@ -323,6 +343,18 @@ void Compiler::statement() {
     else {
         expression_statement();
     }
+}
+
+void Compiler::var_declaration() {
+    std::uint8_t global = parse_variable("Expect variable name.");
+
+    if (match(TokenType::EQUAL)) {
+        expression();
+    } else {
+        emit_opcode(OpCode::NIL);
+    }
+    consume(TokenType::SEMICOLON, "Expect ';' after variable declaration.");
+    define_variable(global);
 }
 
 void Compiler::print_statement() {

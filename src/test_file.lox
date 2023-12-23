@@ -1,2 +1,2 @@
-print 1 + 2;
-print 3 * 4;
+var a = 3;
+var b = "this is a string";
