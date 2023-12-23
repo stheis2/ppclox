@@ -66,6 +66,8 @@ private:
 
     static void advance();
     static void consume(TokenType type, const char* message);
+    static bool check(TokenType type);
+    static bool match(TokenType type);
 
     static void emit_byte(std::uint8_t byte);
     static void emit_opcode(OpCode op_code);
@@ -85,6 +87,9 @@ private:
     static void string();
     static void unary();
     static void expression();
+    static void declaration();
+    static void statement();
+    static void print_statement();
 };
 
 #endif

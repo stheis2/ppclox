@@ -55,6 +55,8 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
             return Chunk::simple_instruction("OP_NOT", offset);
         case std::to_underlying(OpCode::NEGATE):
             return Chunk::simple_instruction("OP_NEGATE", offset);
+        case std::to_underlying(OpCode::PRINT):
+            return Chunk::simple_instruction("OP_PRINT", offset);
         case std::to_underlying(OpCode::RETURN):
             return Chunk::simple_instruction("OP_RETURN", offset);
         default:

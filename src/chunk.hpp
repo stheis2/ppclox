@@ -18,6 +18,7 @@ enum class OpCode : std::uint8_t {
     DIVIDE,
     NOT,
     NEGATE,
+    PRINT,
     RETURN
 };
 

@@ -171,9 +171,13 @@ InterpretResult VM::run() {
                 push(-pop().as_number());
                 break;
             }
-            case std::to_underlying(OpCode::RETURN): {
+            case std::to_underlying(OpCode::PRINT): {
                 pop().print();
                 printf("\n");
+                break;
+            }
+            case std::to_underlying(OpCode::RETURN): {
+                // Exit interpreter
                 return InterpretResult::OK;
             }
             default:

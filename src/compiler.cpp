@@ -61,8 +61,9 @@ bool Compiler::compile(const char* source, const std::shared_ptr<Chunk>& chunk) 
     s_current_chunk = chunk;
 
     advance();
-    expression();
-    consume(TokenType::END_OF_FILE, "Expect end of expression.");
+    while (!match(TokenType::END_OF_FILE)) {
+        declaration();
+    }
     end_compiler();
     bool had_error = s_parser->had_error;
 
@@ -124,6 +125,16 @@ void Compiler::consume(TokenType type, const char* message) {
     }
 
     error_at_current(message);
+}
+
+bool Compiler::check(TokenType type) {
+    return s_parser->current.type == type;
+}
+
+bool Compiler::match(TokenType type) {
+    if (!check(type)) return false;
+    advance();
+    return true;
 }
 
 void Compiler::emit_byte(std::uint8_t byte) {
@@ -270,4 +281,20 @@ void Compiler::unary() {
 void Compiler::expression() {
 //TODO: Should this really be Precedence::NONE?
     parse_precedence(Precedence::ASSIGNMENT);
+}
+
+void Compiler::declaration() {
+    statement();
+}
+
+void Compiler::statement() {
+    if (match(TokenType::PRINT)) {
+        print_statement();
+    }
+}
+
+void Compiler::print_statement() {
+    expression();
+    consume(TokenType::SEMICOLON, "Expect ';' after value in print statement.");
+    emit_opcode(OpCode::PRINT);
 }

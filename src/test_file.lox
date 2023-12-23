@@ -1,1 +1,2 @@
-"" + "this is another string" + "" + "final"
+print 1 + 2;
+print 3 * 4;
