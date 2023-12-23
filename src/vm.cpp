@@ -90,7 +90,7 @@ InterpretResult VM::run() {
             case std::to_underlying(OpCode::NIL): push(Value()); break;
             case std::to_underlying(OpCode::TRUE): push(Value(true)); break;
             case std::to_underlying(OpCode::FALSE): push(Value(false)); break;
-            case std::to_underlying(OpCode::POP): ppp(); break;
+            case std::to_underlying(OpCode::POP): pop(); break;
             case std::to_underlying(OpCode::EQUAL): {
                 Value b = pop();
                 Value a = pop();
