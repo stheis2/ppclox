@@ -23,11 +23,28 @@ public:
     static void* operator new(size_t size);
     static void operator delete(void *memory);
 
-//FIX - Do we need a virtual destructor?    
+    /** Free all allocated objects */
+    static void free_objects();
+
+    /** Virtual destructor ensures that deleting through base pointer will call derived destructors */
+    virtual ~Obj() {
+        std::cerr << "Destructing Obj" << std::endl;
+    }
+
 protected:
     Obj(ObjType type) : m_type(type) {}
 private:
     ObjType m_type{};
+    /** 
+     * NOTE! Do NOT initialize this field. It gets set by the overloaded new operator.
+     * If we initialize it here, it will get initialized AFTER the new operator has run
+     * and so will override what was done in the new operator.
+     * @todo Maybe utilize an external list like a vector instead of an intrusive linked list?
+    */
+    Obj* m_next;
+
+    /** Pointer to head of linked list of objects*/
+    static Obj* s_objects_head;
 
 //TODO: Implement custom new and delete for objs? And how do we account for the ObjStrings
 // memory?   

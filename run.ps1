@@ -16,13 +16,13 @@ try {
             # Return from this script
             return
         }
-
-        Write-Host ""
-        ./pplox
     }
     finally {
         Pop-Location
     }
+
+    Write-Host ""
+    ./build/pplox ./src/test_file.lox
 }
 finally {
     Pop-Location

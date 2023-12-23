@@ -1,16 +1,39 @@
 #include "object.hpp"
 
+
 void Obj::print() const {
     printf("Object: %d", m_type);
 }
 
 void* Obj::operator new(std::size_t size) {
-    return ::operator new(size);
+    void* ptr = ::operator new(size);
+    // Whenever we allocate an Obj, we insert it into the linked list
+    
+    Obj* obj = static_cast<Obj*>(ptr);
+    obj->m_next = s_objects_head;
+    s_objects_head = obj;
+    std::cerr << "Allocating new obj with size: " << size << " " << s_objects_head << " " << obj->m_next << std::endl;
+    std::cerr << "Size of Obj: " << sizeof(Obj) << std::endl;
+    std::cerr << "Size of ObjString: " << sizeof(ObjString) << std::endl;
+    return ptr;;
 }
 
 void Obj::operator delete(void *memory) {
     ::operator delete(memory);
 }
+
+void Obj::free_objects() {
+    Obj* object = s_objects_head;
+    while (object != nullptr) {
+        Obj* next = object->m_next;
+        std::cerr << "Deleting pointer: " << object << ". Next: " << next << std::endl;
+        delete object;
+        object = next;
+    }
+    s_objects_head = nullptr;
+}
+
+Obj* Obj::s_objects_head{};
 
 
 bool InternedStringKey::operator==(const InternedStringKey& key) const {
@@ -49,11 +72,13 @@ void ObjString::print() const {
 }
 
 ObjString::~ObjString() {
+    std::cerr << "Destructing ObjString..." << std::endl;
     // Construct the search key we will use to find ourselves in the map
     InternedStringKey search(this);
     // Upon destruction, we need to clean ourselves out of the map
 //FIX - should probably protect this with a lock so these can be used across threads 
     s_interned_strings.erase(search);
+    std::cerr << "Destructing ObjString done. Interned string size: " << s_interned_strings.size() << std::endl;
 }
 
 ObjString* ObjString::copy_string(const char* chars, std::size_t length) {
@@ -104,4 +129,6 @@ void ObjString::store_new(ObjString* str) {
     // Construct the key we will use to find ourselves in the map later
     InternedStringKey key(str);
     s_interned_strings[key] = str;
+
+    std::cerr << "Stored new string. Interned string size: " << s_interned_strings.size() << std::endl;
 }

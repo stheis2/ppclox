@@ -69,6 +69,9 @@ int main(int argc, const char* argv[]) {
         std::exit(64);
     }
 
+    /** Free all objects before program exit */
+    Obj::free_objects();
+
 #if false
     auto chunk_ptr = std::make_shared<Chunk>();
 
