@@ -22,6 +22,7 @@ public:
     Value(Obj* obj);
 
     void print() const;
+    bool operator==(const Value& rhs) const;
 
     bool as_bool() const { return m_as.boolean; }
     double as_number() const { return m_as.number; }
@@ -38,6 +39,9 @@ public:
 
     ObjString* as_string() const { return (ObjString*)as_obj(); }
     const char* as_cstring() const { return ((ObjString*)as_obj())->chars(); }
+
+    /** Lox follows Ruby in that nil and false are falsey and every other value behaves like true. */
+    bool is_falsey() const { return is_nil() || (is_bool() && !as_bool()); }
 private:
     ValueType m_type{ValueType::NIL};
     union {

@@ -38,3 +38,21 @@ void Value::print() const {
             break;
     }
 }
+
+bool Value::operator==(const Value& rhs) const {
+    if (m_type != rhs.m_type) return false;
+    switch (m_type) {
+        case ValueType::BOOL: return as_bool() == rhs.as_bool();
+        case ValueType::NIL: return true;
+        case ValueType::NUMBER: return as_number() == rhs.as_number();
+        // Objects are considered distinct if they point to 
+        // different objects on the heap. Thanks to ObjString
+        // de-duping/interning, this is equivalent to comparing
+        // character by character for ObjStrings, but much faster.
+        case ValueType::OBJ: return as_obj() == rhs.as_obj();
+        default:
+            // Should be unreachable, but just assume false
+// TODO: Throw an exception instead?
+            return false;
+    }
+}

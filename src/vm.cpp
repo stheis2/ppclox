@@ -90,6 +90,30 @@ InterpretResult VM::run() {
             case std::to_underlying(OpCode::NIL): push(Value()); break;
             case std::to_underlying(OpCode::TRUE): push(Value(true)); break;
             case std::to_underlying(OpCode::FALSE): push(Value(false)); break;
+            case std::to_underlying(OpCode::EQUAL): {
+                Value b = pop();
+                Value a = pop();
+                push(a == b);
+                break;
+            }
+            case std::to_underlying(OpCode::GREATER): {
+                if (!verify_binary_op_types()) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                double b = pop().as_number();
+                double a = pop().as_number();
+                push(a > b);
+                break;
+            }
+            case std::to_underlying(OpCode::LESS): {
+                if (!verify_binary_op_types()) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                double b = pop().as_number();
+                double a = pop().as_number();
+                push(a < b);
+                break;
+            }
             case std::to_underlying(OpCode::ADD): {
                 if (!verify_binary_op_types()) {
                     return InterpretResult::RUNTIME_ERROR;
@@ -124,6 +148,10 @@ InterpretResult VM::run() {
                 double b = pop().as_number();
                 double a = pop().as_number();
                 push(a / b);
+                break;
+            }
+            case std::to_underlying(OpCode::NOT): {
+                push(pop().is_falsey());
                 break;
             }
             case std::to_underlying(OpCode::NEGATE): {

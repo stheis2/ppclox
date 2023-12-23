@@ -10,46 +10,46 @@ std::shared_ptr<Chunk> Compiler::s_current_chunk{};
 //       Make sure any changes to the TokenType enum get reflected here!
 // TODO: Maybe switch to a map and generate the array at compilation start.
 ParseRule Compiler::s_rules[] = {
-    {grouping,    nullptr,   Precedence::NONE},   // [TokenType::LEFT_PAREN]
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::RIGHT_PAREN]
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::LEFT_BRACE]     
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::RIGHT_BRACE]   
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::COMMA]         
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::DOT]           
-    {unary,       binary,    Precedence::TERM},   // [TokenType::MINUS]         
-    {nullptr,     binary,    Precedence::TERM},   // [TokenType::PLUS]          
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::SEMICOLON]     
-    {nullptr,     binary,    Precedence::FACTOR}, // [TokenType::SLASH]         
-    {nullptr,     binary,    Precedence::FACTOR}, // [TokenType::STAR]          
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::BANG]          
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::BANG_EQUAL]    
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::EQUAL]         
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::EQUAL_EQUAL]   
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::GREATER]       
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::GREATER_EQUAL] 
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::LESS]          
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::LESS_EQUAL]    
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::IDENTIFIER]    
-    {string,      nullptr,   Precedence::NONE},   // [TokenType::STRING]        
-    {number,      nullptr,   Precedence::NONE},   // [TokenType::NUMBER]        
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::AND]           
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::CLASS]         
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::ELSE]          
-    {literal,     nullptr,   Precedence::NONE},   // [TokenType::FALSE]         
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::FOR]           
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::FUN]           
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::IF]            
-    {literal,     nullptr,   Precedence::NONE},   // [TokenType::NIL]           
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::OR]            
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::PRINT]         
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::RETURN]        
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::SUPER]         
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::THIS]          
-    {literal,     nullptr,   Precedence::NONE},   // [TokenType::TRUE]          
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::VAR]           
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::WHILE]         
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::ERROR]         
-    {nullptr,     nullptr,   Precedence::NONE},   // [TokenType::END_OF_FILE]   
+    {grouping,    nullptr,   Precedence::NONE},         // [TokenType::LEFT_PAREN]
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::RIGHT_PAREN]
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::LEFT_BRACE]     
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::RIGHT_BRACE]   
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::COMMA]         
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::DOT]           
+    {unary,       binary,    Precedence::TERM},         // [TokenType::MINUS]         
+    {nullptr,     binary,    Precedence::TERM},         // [TokenType::PLUS]          
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::SEMICOLON]     
+    {nullptr,     binary,    Precedence::FACTOR},       // [TokenType::SLASH]         
+    {nullptr,     binary,    Precedence::FACTOR},       // [TokenType::STAR]          
+    {unary,       nullptr,   Precedence::NONE},         // [TokenType::BANG]          
+    {nullptr,     binary,    Precedence::EQUALITY},     // [TokenType::BANG_EQUAL]    
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::EQUAL]         
+    {nullptr,     binary,    Precedence::EQUALITY},     // [TokenType::EQUAL_EQUAL]   
+    {nullptr,     binary,    Precedence::COMPARISON},   // [TokenType::GREATER]       
+    {nullptr,     binary,    Precedence::COMPARISON},   // [TokenType::GREATER_EQUAL] 
+    {nullptr,     binary,    Precedence::COMPARISON},   // [TokenType::LESS]          
+    {nullptr,     binary,    Precedence::COMPARISON},   // [TokenType::LESS_EQUAL]    
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::IDENTIFIER]    
+    {string,      nullptr,   Precedence::NONE},         // [TokenType::STRING]        
+    {number,      nullptr,   Precedence::NONE},         // [TokenType::NUMBER]        
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::AND]           
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::CLASS]         
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::ELSE]          
+    {literal,     nullptr,   Precedence::NONE},         // [TokenType::FALSE]         
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::FOR]           
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::FUN]           
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::IF]            
+    {literal,     nullptr,   Precedence::NONE},         // [TokenType::NIL]           
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::OR]            
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::PRINT]         
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::RETURN]        
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::SUPER]         
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::THIS]          
+    {literal,     nullptr,   Precedence::NONE},         // [TokenType::TRUE]          
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::VAR]           
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::WHILE]         
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::ERROR]         
+    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::END_OF_FILE]   
 };
 
 bool Compiler::compile(const char* source, const std::shared_ptr<Chunk>& chunk) {
@@ -191,6 +191,24 @@ void Compiler::binary() {
     parse_precedence(static_cast<Precedence>(std::to_underlying(rule.precedence) + 1));
 
     switch (operator_type) {
+        case TokenType::BANG_EQUAL: {
+            emit_opcode(OpCode::EQUAL);
+            emit_opcode(OpCode::NOT);
+            break;
+        }
+        case TokenType::EQUAL_EQUAL: emit_opcode(OpCode::EQUAL); break;
+        case TokenType::GREATER: emit_opcode(OpCode::GREATER); break;
+        case TokenType::GREATER_EQUAL: {
+            emit_opcode(OpCode::LESS);
+            emit_opcode(OpCode::NOT);  
+            break;
+        }
+        case TokenType::LESS: emit_opcode(OpCode::LESS); break;
+        case TokenType::LESS_EQUAL: {
+            emit_opcode(OpCode::GREATER);
+            emit_opcode(OpCode::NOT);  
+            break;
+        }
         case TokenType::PLUS:  emit_opcode(OpCode::ADD); break;
         case TokenType::MINUS: emit_opcode(OpCode::SUBTRACT); break;
         case TokenType::STAR:  emit_opcode(OpCode::MULTIPLY); break;
@@ -241,6 +259,7 @@ void Compiler::unary() {
 
     // Emit the operator instruction
     switch (operator_type) {
+        case TokenType::BANG: emit_opcode(OpCode::NOT); break;
         case TokenType::MINUS: emit_opcode(OpCode::NEGATE); break;
         default:
             error("Unhandled operator type after compiling unary expression.");

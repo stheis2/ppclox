@@ -37,7 +37,13 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
         case std::to_underlying(OpCode::TRUE):
             return Chunk::simple_instruction("OP_TRUE", offset);            
         case std::to_underlying(OpCode::FALSE):
-            return Chunk::simple_instruction("OP_FALSE", offset);            
+            return Chunk::simple_instruction("OP_FALSE", offset);     
+        case std::to_underlying(OpCode::EQUAL):
+            return Chunk::simple_instruction("OP_EQUAL", offset);
+        case std::to_underlying(OpCode::GREATER):
+            return Chunk::simple_instruction("OP_GREATER", offset);
+        case std::to_underlying(OpCode::LESS):
+            return Chunk::simple_instruction("OP_LESS", offset);       
         case std::to_underlying(OpCode::ADD):
             return Chunk::simple_instruction("OP_ADD", offset);
         case std::to_underlying(OpCode::SUBTRACT):
@@ -46,6 +52,8 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
             return Chunk::simple_instruction("OP_MULTIPLY", offset);
         case std::to_underlying(OpCode::DIVIDE):
             return Chunk::simple_instruction("OP_DIVIDE", offset);            
+        case std::to_underlying(OpCode::NOT):
+            return Chunk::simple_instruction("OP_NOT", offset);
         case std::to_underlying(OpCode::NEGATE):
             return Chunk::simple_instruction("OP_NEGATE", offset);
         case std::to_underlying(OpCode::RETURN):
