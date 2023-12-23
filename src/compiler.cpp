@@ -106,6 +106,33 @@ void Compiler::error(const char* message) {
     error_at(s_parser->previous, message);
 }
 
+void Compiler::synchronize() {
+    s_parser->panic_mode = false;
+
+    /** 
+     * Skip tokens indiscriminantly until we reach something that
+     * looks like a statement boundary.
+    */
+    while (s_parser->current.type != TokenType::END_OF_FILE) {
+        if (s_parser->previous.type == TokenType::SEMICOLON) return;
+        switch(s_parser->current.type) {
+            case TokenType::CLASS:
+            case TokenType::FUN:
+            case TokenType::VAR:
+            case TokenType::FOR:
+            case TokenType::IF:
+            case TokenType::WHILE:
+            case TokenType::PRINT:
+            case TokenType::RETURN:
+                return;
+            default:
+                break;
+        }
+
+        advance();
+    }
+}
+
 void Compiler::advance() {
     s_parser->previous = s_parser->current;
 
@@ -285,11 +312,16 @@ void Compiler::expression() {
 
 void Compiler::declaration() {
     statement();
+
+    if (s_parser->panic_mode) synchronize();
 }
 
 void Compiler::statement() {
     if (match(TokenType::PRINT)) {
         print_statement();
+    }
+    else {
+        expression_statement();
     }
 }
 
@@ -297,4 +329,10 @@ void Compiler::print_statement() {
     expression();
     consume(TokenType::SEMICOLON, "Expect ';' after value in print statement.");
     emit_opcode(OpCode::PRINT);
+}
+
+void Compiler::expression_statement() {
+    expression();
+    consume(TokenType::SEMICOLON, "Expect ';' after expression.");
+    emit_opcode(OpCode::POP);
 }

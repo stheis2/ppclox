@@ -36,7 +36,9 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
         case std::to_underlying(OpCode::TRUE):
             return Chunk::simple_instruction("OP_TRUE", offset);            
         case std::to_underlying(OpCode::FALSE):
-            return Chunk::simple_instruction("OP_FALSE", offset);     
+            return Chunk::simple_instruction("OP_FALSE", offset);
+        case std::to_underlying(OpCode::POP):
+            return Chunk::simple_instruction("OP_POP", offset);            
         case std::to_underlying(OpCode::EQUAL):
             return Chunk::simple_instruction("OP_EQUAL", offset);
         case std::to_underlying(OpCode::GREATER):

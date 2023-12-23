@@ -63,6 +63,7 @@ private:
     static void error_at(const Token& token, const char* message);
     static void error_at_current(const char* message);
     static void error(const char* message);
+    static void synchronize();
 
     static void advance();
     static void consume(TokenType type, const char* message);
@@ -90,6 +91,7 @@ private:
     static void declaration();
     static void statement();
     static void print_statement();
+    static void expression_statement();
 };
 
 #endif
