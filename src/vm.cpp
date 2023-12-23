@@ -115,6 +115,15 @@ InterpretResult VM::run() {
                 break;
             }
             case std::to_underlying(OpCode::ADD): {
+                // Handle String concatenation
+                if (peek(0).is_string() && peek(1).is_string()) {
+                    Value b = pop();
+                    Value a = pop();
+                    ObjString* result = *a.as_string() + *b.as_string();
+                    push(result);
+                    break;
+                }
+
                 if (!verify_binary_op_types()) {
                     return InterpretResult::RUNTIME_ERROR;
                 }
