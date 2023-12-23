@@ -83,6 +83,7 @@ class InternedStringKeyHash {
 public:    
     size_t operator()(const InternedStringKey& key) const
     {
+        std::cerr << "Returning cached hash for interned string key" << std::endl;
         //return std::hash<std::string_view>()(key.m_string_view);
         return key.hash();
     }
@@ -133,6 +134,16 @@ private:
 
     /** Map used for de-deping ObjStrings */
     static std::unordered_map<InternedStringKey, ObjString*, InternedStringKeyHash> s_interned_strings;
+};
+
+// Function object that knows how to hash ObjString
+// See method 3 at https://marknelson.us/posts/2011/09/03/hash-functions-for-c-unordered-containers.html
+class ObjStringHash {
+public:    
+    size_t operator()(const ObjString& obj_string) const
+    {
+        return obj_string.hash();
+    }
 };
 
 #endif

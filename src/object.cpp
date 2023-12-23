@@ -37,18 +37,23 @@ Obj* Obj::s_objects_head{};
 
 
 bool InternedStringKey::operator==(const InternedStringKey& key) const {
+    std::cerr << "Comparing interned string keys" << std::endl;
+
     // Thanks to de-duping of the ObjStrings,
     // equal ObjString* pointers indicate equivalent objects
     if (this->m_obj_string != nullptr && key.m_obj_string != nullptr) {
+        std::cerr << "Fast path compare 1" << std::endl;
         return this->m_obj_string == key.m_obj_string;
     }
 
     // If the hashes differ, we know we are different
     if (this->m_hash != key.m_hash) {
+        std::cerr << "Fast path bail 2" << std::endl;
         return false;
     }
 
     // If hashes are the same, we must compare strings directly
+    std::cerr << "Slow path" << std::endl;
     return this->m_string_view == key.m_string_view;
 }
 
