@@ -86,6 +86,12 @@ ObjString* ObjString::take_string(std::string&& text) {
     return str;
 }
 
+/** Add the two strings and return the result (usually a new string) */
+ObjString* ObjString::operator+(const ObjString& rhs) const {
+    std::string combined = m_string + rhs.m_string;
+    return ObjString::take_string(std::move(combined));
+}
+
 ObjString* ObjString::find_existing(const InternedStringKey& search) {
     auto it = s_interned_strings.find(search);
     if (it != s_interned_strings.end()) {

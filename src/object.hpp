@@ -86,6 +86,9 @@ public:
     */
     static ObjString* take_string(std::string&& text);
 
+    /** Add the two strings and return the result (usually a new string) */
+    ObjString* operator+(const ObjString& rhs) const;
+
     std::size_t length() const { return m_string.size(); }
     const char* chars() const { return m_string.c_str(); }
     std::size_t hash() const { return m_hash; }
