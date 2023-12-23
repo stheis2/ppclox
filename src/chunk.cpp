@@ -39,8 +39,10 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
             return Chunk::simple_instruction("OP_FALSE", offset);
         case std::to_underlying(OpCode::POP):
             return Chunk::simple_instruction("OP_POP", offset);
+        case std::to_underlying(OpCode::GET_GLOBAL):
+            return Chunk::constant_instruction("OP_GET_GLOBAL", *this, offset);
         case std::to_underlying(OpCode::DEFINE_GLOBAL):
-            return Chunk::constant_instruction("OP_DEFINE_GLOBAL", *this, offset);            
+            return Chunk::constant_instruction("OP_DEFINE_GLOBAL", *this, offset);
         case std::to_underlying(OpCode::EQUAL):
             return Chunk::simple_instruction("OP_EQUAL", offset);
         case std::to_underlying(OpCode::GREATER):

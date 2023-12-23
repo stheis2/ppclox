@@ -91,6 +91,16 @@ InterpretResult VM::run() {
             case std::to_underlying(OpCode::TRUE): push(Value(true)); break;
             case std::to_underlying(OpCode::FALSE): push(Value(false)); break;
             case std::to_underlying(OpCode::POP): pop(); break;
+            case std::to_underlying(OpCode::GET_GLOBAL): {
+                ObjString* name = read_string();
+                auto it = m_globals.find(ObjStringRef(name));
+                if (it == m_globals.end()) {
+                    runtime_error("Undefined variable '%s'.", name->chars());
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                push(it->second);
+                break;
+            }
             case std::to_underlying(OpCode::DEFINE_GLOBAL): {
                 ObjString* name = read_string();
                 // NOTE! Peek/pop was done in the C implementation

@@ -89,6 +89,8 @@ private:
     static void grouping();
     static void number();
     static void string();
+    static void named_variable(const Token& name);
+    static void variable();
     static void unary();
     static void expression();
     static void declaration();

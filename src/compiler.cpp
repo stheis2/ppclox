@@ -29,7 +29,7 @@ ParseRule Compiler::s_rules[] = {
     {nullptr,     binary,    Precedence::COMPARISON},   // [TokenType::GREATER_EQUAL] 
     {nullptr,     binary,    Precedence::COMPARISON},   // [TokenType::LESS]          
     {nullptr,     binary,    Precedence::COMPARISON},   // [TokenType::LESS_EQUAL]    
-    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::IDENTIFIER]    
+    {variable,    nullptr,   Precedence::NONE},         // [TokenType::IDENTIFIER]    
     {string,      nullptr,   Precedence::NONE},         // [TokenType::STRING]        
     {number,      nullptr,   Precedence::NONE},         // [TokenType::NUMBER]        
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::AND]           
@@ -303,6 +303,15 @@ void Compiler::string() {
     //       take the characters as they are.
     emit_constant(Value(ObjString::copy_string(s_parser->previous.start + 1, 
         s_parser->previous.length - 2)));
+}
+
+void Compiler::named_variable(const Token& name) {
+    std::uint8_t arg = identifier_constant(name);
+    emit_opcode(OpCode::GET_GLOBAL, arg);
+}
+
+void Compiler::variable() {
+    named_variable(s_parser->previous);
 }
 
 void Compiler::unary() {
