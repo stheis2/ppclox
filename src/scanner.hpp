@@ -41,6 +41,8 @@ public:
     const char* start{};
     std::size_t length{};
     std::size_t line{};
+
+    const std::string_view as_string_view() const { return std::string_view(start, length); }
 };
 
 // TODO: Can we implement this using more C++ idioms?

@@ -3,6 +3,7 @@
 /** Zero initialize these to start */
 std::unique_ptr<Scanner> Compiler::s_scanner{};
 std::unique_ptr<Parser> Compiler::s_parser{};
+std::vector<Compiler> Compiler::s_compilers{};
 std::shared_ptr<Chunk> Compiler::s_current_chunk{};
 
 // NOTE! Unfortunately C++ doesn't support array initialization
@@ -56,6 +57,9 @@ bool Compiler::compile(const char* source, const std::shared_ptr<Chunk>& chunk) 
     // Create a scanner and parser we can use for this source
     s_scanner = std::make_unique<Scanner>(source);
     s_parser = std::make_unique<Parser>();
+
+    // Create our initial compiler on the compiler stack
+    s_compilers.emplace_back();
 
     // Store our chunk while we operate on it
     s_current_chunk = chunk;
@@ -201,6 +205,16 @@ void Compiler::emit_constant(Value value) {
     emit_opcode_arg(OpCode::CONSTANT, make_constant(value));
 }
 
+void Compiler::add_local(Token name) {
+    if (current().m_locals.size() >= k_locals_max) {
+        error("Too many local variables in function.");
+        return;
+    }
+    current().m_locals.emplace_back(Local {
+        .name = name,
+        .depth = current().scope_depth
+    });
+}
 
 
 void Compiler::end_compiler() {
@@ -210,6 +224,20 @@ void Compiler::end_compiler() {
         current_chunk()->dissassemble("code");
     }
 #endif    
+}
+
+void Compiler::begin_scope() {
+    current().scope_depth++;
+}
+
+void Compiler::end_scope() {
+    current().scope_depth--;
+
+    // We need to pop all local variables when we leave the scope
+    while (current().m_locals.size() > 0 && current().m_locals.back().depth > current().scope_depth) {
+        emit_opcode(OpCode::POP);
+        current().m_locals.pop_back();
+    }
 }
 
 void Compiler::parse_precedence(Precedence precedence) {
@@ -236,10 +264,44 @@ void Compiler::parse_precedence(Precedence precedence) {
 
 std::uint8_t Compiler::parse_variable(const char* error_message) {
     consume(TokenType::IDENTIFIER, error_message);
+
+    declare_variable();
+    // Return dummy index if we're in a local scope
+    if (current().scope_depth > 0) return 0;
+
     return identifier_constant(s_parser->previous);
 }
 
+void Compiler::declare_variable() {
+    // Globals should not be added to the locals
+    if (current().scope_depth == 0) return;
+
+    const Token& name = s_parser->previous;
+
+    /** Iterate the locals in reverse order */
+    for (auto it = current().m_locals.rbegin(); it != current().m_locals.rend(); ++it) {
+        const Local& local = *it;
+
+        // Once we reach a lower scope, we're done since don't disallow
+        // same named variables in different scopes.
+        if (local.depth != -1 && local.depth < current().scope_depth) {
+            break;
+        }
+
+        if (name.as_string_view() == local.name.as_string_view()) {
+            error("Already a variable with this name in this scope.");
+        }
+    }
+
+    add_local(name);
+}
+
 void Compiler::define_variable(std::uint8_t global) {
+    // Locals don't need to be explicitly defined since they
+    // live on the value stack
+    if (current().scope_depth > 0) {
+        return;
+    }
     emit_opcode_arg(OpCode::DEFINE_GLOBAL, global);
 }
 
@@ -359,6 +421,10 @@ void Compiler::declaration() {
 void Compiler::statement() {
     if (match(TokenType::PRINT)) {
         print_statement();
+    } else if (match(TokenType::LEFT_BRACE)) {
+        begin_scope();
+        block();
+        end_scope();
     }
     else {
         expression_statement();
@@ -381,6 +447,14 @@ void Compiler::print_statement() {
     expression();
     consume(TokenType::SEMICOLON, "Expect ';' after value in print statement.");
     emit_opcode(OpCode::PRINT);
+}
+
+void Compiler::block() {
+    while (!check(TokenType::RIGHT_BRACE) && !check(TokenType::END_OF_FILE)) {
+        declaration();
+    }
+
+    consume(TokenType::RIGHT_BRACE, "Expect '}' after block.");
 }
 
 void Compiler::expression_statement() {
