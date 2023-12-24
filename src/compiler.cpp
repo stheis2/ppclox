@@ -398,7 +398,7 @@ void Compiler::named_variable(const Token& name, bool can_assign) {
         set_op = OpCode::SET_LOCAL;
 
         // This should never happend, but verify here
-        if (local_index > std::numeric_limits<std::uint8_t>::max()) {
+        if (local_index >= std::numeric_limits<std::uint8_t>::max()) {
             error("Too many local variables in function.");
             return;
         }
