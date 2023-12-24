@@ -172,7 +172,7 @@ void Compiler::emit_opcode(OpCode op_code) {
     emit_byte(std::to_underlying(op_code));
 }
 
-void Compiler::emit_opcode(OpCode op_code, std::uint8_t byte) {
+void Compiler::emit_opcode_arg(OpCode op_code, std::uint8_t byte) {
     emit_byte(std::to_underlying(op_code));
     emit_byte(byte);
 }
@@ -198,7 +198,7 @@ std::uint8_t Compiler::identifier_constant(const Token& name) {
 }
 
 void Compiler::emit_constant(Value value) {
-    emit_opcode(OpCode::CONSTANT, make_constant(value));
+    emit_opcode_arg(OpCode::CONSTANT, make_constant(value));
 }
 
 
@@ -220,12 +220,17 @@ void Compiler::parse_precedence(Precedence precedence) {
         return;
     }
 
-    prefix_rule();
+    bool can_assign = precedence <= Precedence::ASSIGNMENT;
+    prefix_rule(can_assign);
 
     while (precedence <= get_rule(s_parser->current.type).precedence) {
         advance();
         ParseFn infix_rule = get_rule(s_parser->previous.type).infix;
-        infix_rule();
+        infix_rule(can_assign);
+    }
+
+    if (can_assign && match(TokenType::EQUAL)) {
+        error("invalid assignment target.");
     }
 }
 
@@ -235,11 +240,11 @@ std::uint8_t Compiler::parse_variable(const char* error_message) {
 }
 
 void Compiler::define_variable(std::uint8_t global) {
-    emit_opcode(OpCode::DEFINE_GLOBAL, global);
+    emit_opcode_arg(OpCode::DEFINE_GLOBAL, global);
 }
 
 
-void Compiler::binary() {
+void Compiler::binary(bool can_assign) {
     TokenType operator_type = s_parser->previous.type;
     ParseRule& rule = get_rule(operator_type);
     parse_precedence(static_cast<Precedence>(std::to_underlying(rule.precedence) + 1));
@@ -274,7 +279,7 @@ void Compiler::binary() {
     }
 }
 
-void Compiler::literal() {
+void Compiler::literal(bool can_assign) {
     switch (s_parser->previous.type) {
         case TokenType::FALSE: emit_opcode(OpCode::FALSE); break;
         case TokenType::NIL: emit_opcode(OpCode::NIL); break;
@@ -286,17 +291,17 @@ void Compiler::literal() {
     }
 }
 
-void Compiler::grouping() {
+void Compiler::grouping(bool can_assign) {
     expression();
     consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-void Compiler::number() {
+void Compiler::number(bool can_assign) {
     double value = strtod(s_parser->previous.start, nullptr);
     emit_constant(value);
 }
 
-void Compiler::string() {
+void Compiler::string(bool can_assign) {
     // Copy the chars between the ""
     // NOTE! If Lox supported string escape sequences like \n, 
     //       we’d translate those here. Since it doesn’t, we can 
@@ -305,16 +310,22 @@ void Compiler::string() {
         s_parser->previous.length - 2)));
 }
 
-void Compiler::named_variable(const Token& name) {
+void Compiler::named_variable(const Token& name, bool can_assign) {
     std::uint8_t arg = identifier_constant(name);
-    emit_opcode(OpCode::GET_GLOBAL, arg);
+
+    if (can_assign && match(TokenType::EQUAL)) {
+        expression();
+        emit_opcode_arg(OpCode::SET_GLOBAL, arg);
+    } else {
+        emit_opcode_arg(OpCode::GET_GLOBAL, arg);
+    }
 }
 
-void Compiler::variable() {
-    named_variable(s_parser->previous);
+void Compiler::variable(bool can_assign) {
+    named_variable(s_parser->previous, can_assign);
 }
 
-void Compiler::unary() {
+void Compiler::unary(bool can_assign) {
     TokenType operator_type = s_parser->previous.type;
 
     // Compile the operand

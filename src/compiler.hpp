@@ -30,7 +30,7 @@ enum class Precedence {
     PRIMARY
 };
 
-typedef void (*ParseFn)();
+typedef void (*ParseFn)(bool can_assign);
 
 class ParseRule {
 public:
@@ -72,8 +72,8 @@ private:
 
     static void emit_byte(std::uint8_t byte);
     static void emit_opcode(OpCode op_code);
-    /** Emit an opcode followed by the given byte */
-    static void emit_opcode(OpCode op_code, std::uint8_t byte);
+    /** Emit an opcode followed by the given byte argument */
+    static void emit_opcode_arg(OpCode op_code, std::uint8_t byte);
     static void emit_return();
     /** Add constant to the current chunk and return its index */
     static std::uint8_t make_constant(Value value);
@@ -84,14 +84,14 @@ private:
     static void parse_precedence(Precedence precedence);
     static std::uint8_t parse_variable(const char* error_message);
     static void define_variable(std::uint8_t global);
-    static void binary();
-    static void literal();
-    static void grouping();
-    static void number();
-    static void string();
-    static void named_variable(const Token& name);
-    static void variable();
-    static void unary();
+    static void binary(bool can_assign);
+    static void literal(bool can_assign);
+    static void grouping(bool can_assign);
+    static void number(bool can_assign);
+    static void string(bool can_assign);
+    static void named_variable(const Token& name, bool can_assign);
+    static void variable(bool can_assign);
+    static void unary(bool can_assign);
     static void expression();
     static void declaration();
     static void statement();

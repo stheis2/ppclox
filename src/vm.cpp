@@ -111,6 +111,16 @@ InterpretResult VM::run() {
                 m_globals[ObjStringRef(name)] = pop();
                 break;
             }
+            case std::to_underlying(OpCode::SET_GLOBAL): {
+                ObjString* name = read_string();
+                auto it = m_globals.find(ObjStringRef(name));
+                if (it == m_globals.end()) {
+                    runtime_error("Undefined variable '%s'.", name->chars());
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                it->second = peek(0);
+                break;
+            }
             case std::to_underlying(OpCode::EQUAL): {
                 Value b = pop();
                 Value a = pop();
