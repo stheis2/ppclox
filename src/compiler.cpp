@@ -212,6 +212,9 @@ bool Compiler::resolve_local(const Compiler& compiler, const Token& name, std::s
         std::size_t index = it - 1;
         const Local& local = compiler.m_locals.at(index);
         if (name.as_string_view() == local.name.as_string_view()) {
+            if (local.depth == -1) {
+                error("Can't read local variable in its own initializer");
+            }
             out_index = index;
             return true;
         }
@@ -222,12 +225,12 @@ bool Compiler::resolve_local(const Compiler& compiler, const Token& name, std::s
 
 void Compiler::add_local(Token name) {
     if (current().m_locals.size() >= k_locals_max) {
-        error("Too many local variables in function.");
+        error("Too many local variables in function in add local.");
         return;
     }
     current().m_locals.emplace_back(Local {
         .name = name,
-        .depth = current().scope_depth
+        .depth = -1
     });
 }
 
@@ -315,9 +318,14 @@ void Compiler::define_variable(std::uint8_t global) {
     // Locals don't need to be explicitly defined since they
     // live on the value stack
     if (current().scope_depth > 0) {
+        mark_initialized();
         return;
     }
     emit_opcode_arg(OpCode::DEFINE_GLOBAL, global);
+}
+
+void Compiler::mark_initialized() {
+    current().m_locals.at(current().m_locals.size() - 1).depth = current().scope_depth;
 }
 
 
@@ -399,7 +407,7 @@ void Compiler::named_variable(const Token& name, bool can_assign) {
 
         // This should never happend, but verify here
         if (local_index >= std::numeric_limits<std::uint8_t>::max()) {
-            error("Too many local variables in function.");
+            error("Too many local variables in function in named_variable.");
             return;
         }
         arg = static_cast<std::uint8_t>(local_index);

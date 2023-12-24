@@ -52,7 +52,7 @@ public:
 private:
     /** Locals are indexed by std::uint8_t at runtime, so thats the max we can currently support */
     static constexpr std::uint32_t k_locals_max = std::numeric_limits<std::uint8_t>::max() + 1;
-    std::vector<Local> m_locals{k_locals_max};
+    std::vector<Local> m_locals{};
     int scope_depth{};
 
     /** During compilation, these will contain the scanner and parser for the current source */
@@ -106,6 +106,7 @@ private:
     static std::uint8_t parse_variable(const char* error_message);
     static void declare_variable();
     static void define_variable(std::uint8_t global);
+    static void mark_initialized();
     static void binary(bool can_assign);
     static void literal(bool can_assign);
     static void grouping(bool can_assign);
