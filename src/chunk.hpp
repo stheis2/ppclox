@@ -10,6 +10,8 @@ enum class OpCode : std::uint8_t {
     TRUE,
     FALSE,
     POP,
+    GET_LOCAL,
+    SET_LOCAL,
     GET_GLOBAL,
     DEFINE_GLOBAL,
     SET_GLOBAL,
@@ -45,6 +47,7 @@ private:
     std::vector<Value> m_constants{};
     
     static std::size_t simple_instruction(const char* name, std::size_t offset);
+    static std::size_t byte_instruction(const char* name, const Chunk& chunk, std::size_t offset);
     static std::size_t constant_instruction(const char* name, const Chunk& chunk, std::size_t offset);
 };
 

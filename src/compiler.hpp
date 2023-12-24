@@ -94,6 +94,8 @@ private:
     static std::uint8_t make_constant(Value value);
     static std::uint8_t identifier_constant(const Token& name);
     static void emit_constant(Value value);
+    /** Return index of local in given compiler's locals as output parameter. Boolean return indicates found or not found. */
+    static bool resolve_local(const Compiler& compiler, const Token& name, std::size_t& out_index);
     static void add_local(Token name);
     static void end_compiler();
 

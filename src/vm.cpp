@@ -91,6 +91,22 @@ InterpretResult VM::run() {
             case std::to_underlying(OpCode::TRUE): push(Value(true)); break;
             case std::to_underlying(OpCode::FALSE): push(Value(false)); break;
             case std::to_underlying(OpCode::POP): pop(); break;
+            case std::to_underlying(OpCode::GET_LOCAL): {
+                std::uint8_t slot = read_byte();
+                // Push copy of the local to the top of the stack where
+                // other instructions will be able to find it.
+                // We're not a register based VM, so we must use the stack.
+                push(m_stack[slot]);
+                break;
+            }
+            case std::to_underlying(OpCode::SET_LOCAL): {
+                std::uint8_t slot = read_byte();
+                // Store the top of the stack back into the local.
+                // Since an assignment is an expression, we leave the
+                // resulting value on the top of the stack.
+                m_stack[slot] = peek(0);
+                break;
+            }
             case std::to_underlying(OpCode::GET_GLOBAL): {
                 ObjString* name = read_string();
                 auto it = m_globals.find(ObjStringRef(name));

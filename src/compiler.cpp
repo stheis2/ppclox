@@ -205,6 +205,21 @@ void Compiler::emit_constant(Value value) {
     emit_opcode_arg(OpCode::CONSTANT, make_constant(value));
 }
 
+bool Compiler::resolve_local(const Compiler& compiler, const Token& name, std::size_t& out_index) {
+    // Iterate backwards and find the index of the local.
+    // Use it = index + 1 to avoid underflow.
+    for (std::size_t it = compiler.m_locals.size(); it > 0; --it) {
+        std::size_t index = it - 1;
+        const Local& local = compiler.m_locals.at(index);
+        if (name.as_string_view() == local.name.as_string_view()) {
+            out_index = index;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void Compiler::add_local(Token name) {
     if (current().m_locals.size() >= k_locals_max) {
         error("Too many local variables in function.");
@@ -278,11 +293,11 @@ void Compiler::declare_variable() {
 
     const Token& name = s_parser->previous;
 
-    /** Iterate the locals in reverse order */
+    /** Iterate the locals in reverse order, checking for duplicates */
     for (auto it = current().m_locals.rbegin(); it != current().m_locals.rend(); ++it) {
         const Local& local = *it;
 
-        // Once we reach a lower scope, we're done since don't disallow
+        // Once we reach a lower scope, we're done since we allow
         // same named variables in different scopes.
         if (local.depth != -1 && local.depth < current().scope_depth) {
             break;
@@ -373,13 +388,33 @@ void Compiler::string(bool can_assign) {
 }
 
 void Compiler::named_variable(const Token& name, bool can_assign) {
-    std::uint8_t arg = identifier_constant(name);
+    OpCode get_op{};
+    OpCode set_op{};
+    std::uint8_t arg{};
+
+    std::size_t local_index{};
+    if (resolve_local(current(), name, local_index)) {
+        get_op = OpCode::GET_LOCAL;
+        set_op = OpCode::SET_LOCAL;
+
+        // This should never happend, but verify here
+        if (local_index > std::numeric_limits<std::uint8_t>::max()) {
+            error("Too many local variables in function.");
+            return;
+        }
+        arg = static_cast<std::uint8_t>(local_index);
+    } else {
+        get_op = OpCode::GET_GLOBAL;
+        set_op = OpCode::SET_GLOBAL;
+        arg = identifier_constant(name);
+    }
+
 
     if (can_assign && match(TokenType::EQUAL)) {
         expression();
-        emit_opcode_arg(OpCode::SET_GLOBAL, arg);
+        emit_opcode_arg(set_op, arg);
     } else {
-        emit_opcode_arg(OpCode::GET_GLOBAL, arg);
+        emit_opcode_arg(get_op, arg);
     }
 }
 

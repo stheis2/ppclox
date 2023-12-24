@@ -30,43 +30,47 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
 
     switch (instruction) {
         case std::to_underlying(OpCode::CONSTANT):
-            return Chunk::constant_instruction("OP_CONSTANT", *this, offset);
+            return constant_instruction("OP_CONSTANT", *this, offset);
         case std::to_underlying(OpCode::NIL):
-            return Chunk::simple_instruction("OP_NIL", offset);            
+            return simple_instruction("OP_NIL", offset);            
         case std::to_underlying(OpCode::TRUE):
-            return Chunk::simple_instruction("OP_TRUE", offset);            
+            return simple_instruction("OP_TRUE", offset);            
         case std::to_underlying(OpCode::FALSE):
-            return Chunk::simple_instruction("OP_FALSE", offset);
+            return simple_instruction("OP_FALSE", offset);
         case std::to_underlying(OpCode::POP):
-            return Chunk::simple_instruction("OP_POP", offset);
+            return simple_instruction("OP_POP", offset);
+        case std::to_underlying(OpCode::GET_LOCAL):
+            return byte_instruction("OP_GET_LOCAL", *this, offset);
+        case std::to_underlying(OpCode::SET_LOCAL):
+            return byte_instruction("OP_SET_LOCAL", *this, offset);
         case std::to_underlying(OpCode::GET_GLOBAL):
-            return Chunk::constant_instruction("OP_GET_GLOBAL", *this, offset);
+            return constant_instruction("OP_GET_GLOBAL", *this, offset);
         case std::to_underlying(OpCode::DEFINE_GLOBAL):
-            return Chunk::constant_instruction("OP_DEFINE_GLOBAL", *this, offset);
+            return constant_instruction("OP_DEFINE_GLOBAL", *this, offset);
         case std::to_underlying(OpCode::SET_GLOBAL):
-            return Chunk::constant_instruction("OP_SET_GLOBAL", *this, offset);
+            return constant_instruction("OP_SET_GLOBAL", *this, offset);
         case std::to_underlying(OpCode::EQUAL):
-            return Chunk::simple_instruction("OP_EQUAL", offset);
+            return simple_instruction("OP_EQUAL", offset);
         case std::to_underlying(OpCode::GREATER):
-            return Chunk::simple_instruction("OP_GREATER", offset);
+            return simple_instruction("OP_GREATER", offset);
         case std::to_underlying(OpCode::LESS):
-            return Chunk::simple_instruction("OP_LESS", offset);       
+            return simple_instruction("OP_LESS", offset);       
         case std::to_underlying(OpCode::ADD):
-            return Chunk::simple_instruction("OP_ADD", offset);
+            return simple_instruction("OP_ADD", offset);
         case std::to_underlying(OpCode::SUBTRACT):
-            return Chunk::simple_instruction("OP_SUBTRACT", offset);
+            return simple_instruction("OP_SUBTRACT", offset);
         case std::to_underlying(OpCode::MULTIPLY):
-            return Chunk::simple_instruction("OP_MULTIPLY", offset);
+            return simple_instruction("OP_MULTIPLY", offset);
         case std::to_underlying(OpCode::DIVIDE):
-            return Chunk::simple_instruction("OP_DIVIDE", offset);            
+            return simple_instruction("OP_DIVIDE", offset);            
         case std::to_underlying(OpCode::NOT):
-            return Chunk::simple_instruction("OP_NOT", offset);
+            return simple_instruction("OP_NOT", offset);
         case std::to_underlying(OpCode::NEGATE):
-            return Chunk::simple_instruction("OP_NEGATE", offset);
+            return simple_instruction("OP_NEGATE", offset);
         case std::to_underlying(OpCode::PRINT):
-            return Chunk::simple_instruction("OP_PRINT", offset);
+            return simple_instruction("OP_PRINT", offset);
         case std::to_underlying(OpCode::RETURN):
-            return Chunk::simple_instruction("OP_RETURN", offset);
+            return simple_instruction("OP_RETURN", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;
@@ -76,6 +80,12 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
 std::size_t Chunk::simple_instruction(const char* name, std::size_t offset) {
     printf("%s\n", name);
     return offset + 1;
+}
+
+std::size_t Chunk::byte_instruction(const char* name, const Chunk& chunk, std::size_t offset) {
+    std::uint8_t slot = chunk.get_code().at(offset + 1);
+    printf("%-16s %4d\n", name, slot);
+    return offset + 2;
 }
 
 std::size_t Chunk::constant_instruction(const char* name, const Chunk& chunk, std::size_t offset) {
