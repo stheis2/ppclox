@@ -206,6 +206,23 @@ void Compiler::patch_jump(std::size_t offset) {
     current_chunk()->patch_at(offset + 1, lo_byte);
 }
 
+void Compiler::emit_loop(std::size_t loop_start) {
+    emit_opcode(OpCode::LOOP);
+
+    // +2 is to take into account the size of the OpCode::LOOP operands
+    // which we also need to jump over.
+    std::size_t offset = current_chunk()->get_code().size() - loop_start + 2;
+    if (offset > std::numeric_limits<std::uint16_t>::max()) {
+        error("Loop body too large.");
+    }
+
+    std::uint8_t ho_byte = static_cast<std::uint8_t>((offset >> 8) & 0xff);
+    std::uint8_t lo_byte = static_cast<std::uint8_t>(offset & 0xff);
+
+    emit_byte(ho_byte);
+    emit_byte(lo_byte);
+}
+
 void Compiler::emit_return() {
     return emit_opcode(OpCode::RETURN);
 }
@@ -510,6 +527,8 @@ void Compiler::statement() {
         print_statement();
     } else if (match(TokenType::IF)) {
         if_statement();
+    } else if (match(TokenType::WHILE)) {
+        while_statement();
     } else if (match(TokenType::LEFT_BRACE)) {
         begin_scope();
         block();
@@ -553,6 +572,21 @@ void Compiler::if_statement() {
 
     if (match(TokenType::ELSE)) statement();
     patch_jump(else_jump);
+}
+
+void Compiler::while_statement() {
+    std::size_t loop_start = current_chunk()->get_code().size();
+    consume(TokenType::LEFT_PAREN, "Expect '(' after 'while'.");
+    expression();
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after condition,");
+
+    std::size_t exit_jump = emit_jump(OpCode::JUMP_IF_FALSE);
+    emit_opcode(OpCode::POP);
+    statement();
+    emit_loop(loop_start);
+
+    patch_jump(exit_jump);
+    emit_opcode(OpCode::POP);
 }
 
 void Compiler::block() {

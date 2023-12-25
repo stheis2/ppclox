@@ -91,6 +91,7 @@ private:
     static void emit_opcode_arg(OpCode op_code, std::uint8_t byte);
     static std::size_t emit_jump(OpCode instruction);
     static void patch_jump(std::size_t offset);
+    static void emit_loop(std::size_t loop_start);
     static void emit_return();
     /** Add constant to the current chunk and return its index */
     static std::uint8_t make_constant(Value value);
@@ -125,6 +126,7 @@ private:
     static void var_declaration();
     static void print_statement();
     static void if_statement();
+    static void while_statement();
     static void block();
     static void expression_statement();
 };
