@@ -5,6 +5,10 @@ void Chunk::write(std::uint8_t byte, std::size_t line) {
     m_lines.push_back(line);
 }
 
+void Chunk::patch_at(std::size_t offset, std::uint8_t byte) {
+    m_code.at(offset) = byte;
+}
+
 std::size_t Chunk::add_constant(Value value) {
     m_constants.push_back(value);
     return m_constants.size() - 1;
@@ -69,6 +73,10 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
             return simple_instruction("OP_NEGATE", offset);
         case std::to_underlying(OpCode::PRINT):
             return simple_instruction("OP_PRINT", offset);
+        case std::to_underlying(OpCode::JUMP):
+            return jump_instruction("OP_JUMP", true, *this, offset);            
+        case std::to_underlying(OpCode::JUMP_IF_FALSE):
+            return jump_instruction("OP_JUMP_IF_FALSE", true, *this, offset);
         case std::to_underlying(OpCode::RETURN):
             return simple_instruction("OP_RETURN", offset);
         default:
@@ -86,6 +94,20 @@ std::size_t Chunk::byte_instruction(const char* name, const Chunk& chunk, std::s
     std::uint8_t slot = chunk.get_code().at(offset + 1);
     printf("%-16s %4d\n", name, slot);
     return offset + 2;
+}
+
+std::size_t Chunk::jump_instruction(const char* name, bool is_forward, const Chunk& chunk, std::size_t offset) {
+    // Extract HO byte, then LO byte
+    std::uint16_t ho_byte = chunk.get_code().at(offset + 1);
+    std::uint16_t lo_byte = chunk.get_code().at(offset + 2);
+    std::uint16_t jump = (ho_byte << 8) | lo_byte;
+
+    // Calculate target
+    std::size_t next_offset = offset + 3;
+    std::size_t target = is_forward ? (next_offset + jump) : (next_offset - jump);
+    printf("%-16s %4zd -> %zd\n", name, offset, target);
+
+    return offset + 3;
 }
 
 std::size_t Chunk::constant_instruction(const char* name, const Chunk& chunk, std::size_t offset) {

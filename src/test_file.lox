@@ -1,14 +1,11 @@
-var global = "blah";
-{
-    var breakfast = "beignets";
-    var beverage = "cafe au lait";
-    breakfast = "beignets with " + beverage;
-
-    print breakfast;
-
-    print beverage;
-    beverage = 25;
-    print beverage;
+var some_boolean = false;
+if (some_boolean) {
+    print "was true";
 }
 
-print global;
+if (some_boolean) {
+    print "was true";
+}
+else {
+    print "was false";
+}

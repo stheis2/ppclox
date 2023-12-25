@@ -181,6 +181,31 @@ void Compiler::emit_opcode_arg(OpCode op_code, std::uint8_t byte) {
     emit_byte(byte);
 }
 
+std::size_t Compiler::emit_jump(OpCode instruction) {
+    emit_opcode(instruction);
+    // Emit two bytes that will be filled in later
+    emit_byte(0xff);
+    emit_byte(0xff);
+    return current_chunk()->get_code().size() - 2;
+}
+
+void Compiler::patch_jump(std::size_t offset) {
+    // -2 to adjust for the bytecode for the jump offset itself.
+    // The given offset is to the jump offset, but the jump is relative to
+    // AFTER the jump offset.
+    std::size_t jump = current_chunk()->get_code().size() - offset - 2;
+
+    if (jump > std::numeric_limits<std::uint16_t>::max()) {
+        error("Too much code to jump over.");
+    }
+
+    std::uint8_t ho_byte = static_cast<std::uint8_t>((jump >> 8) & 0xff);
+    std::uint8_t lo_byte = static_cast<std::uint8_t>(jump & 0xff);
+
+    current_chunk()->patch_at(offset, ho_byte);
+    current_chunk()->patch_at(offset + 1, lo_byte);
+}
+
 void Compiler::emit_return() {
     return emit_opcode(OpCode::RETURN);
 }
@@ -464,6 +489,8 @@ void Compiler::declaration() {
 void Compiler::statement() {
     if (match(TokenType::PRINT)) {
         print_statement();
+    } else if (match(TokenType::IF)) {
+        if_statement();
     } else if (match(TokenType::LEFT_BRACE)) {
         begin_scope();
         block();
@@ -490,6 +517,23 @@ void Compiler::print_statement() {
     expression();
     consume(TokenType::SEMICOLON, "Expect ';' after value in print statement.");
     emit_opcode(OpCode::PRINT);
+}
+
+void Compiler::if_statement() {
+    consume(TokenType::LEFT_PAREN, "Expect '(' after 'if'.");
+    expression();
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after condition.");
+
+    std::size_t then_jump = emit_jump(OpCode::JUMP_IF_FALSE);
+    emit_opcode(OpCode::POP);
+    statement();
+
+    std::size_t else_jump = emit_jump(OpCode::JUMP);
+    patch_jump(then_jump);
+    emit_opcode(OpCode::POP);
+
+    if (match(TokenType::ELSE)) statement();
+    patch_jump(else_jump);
 }
 
 void Compiler::block() {

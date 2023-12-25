@@ -223,6 +223,16 @@ InterpretResult VM::run() {
                 printf("\n");
                 break;
             }
+            case std::to_underlying(OpCode::JUMP): {
+                std::uint16_t offset = read_short();
+                m_ip += offset;
+                break;
+            }
+            case std::to_underlying(OpCode::JUMP_IF_FALSE): {
+                std::uint16_t offset = read_short();
+                if (peek(0).is_falsey()) m_ip += offset;
+                break;
+            }
             case std::to_underlying(OpCode::RETURN): {
                 // Exit interpreter
                 return InterpretResult::OK;

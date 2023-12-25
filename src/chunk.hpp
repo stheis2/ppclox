@@ -25,6 +25,8 @@ enum class OpCode : std::uint8_t {
     NOT,
     NEGATE,
     PRINT,
+    JUMP,
+    JUMP_IF_FALSE,
     RETURN
 };
 
@@ -32,6 +34,8 @@ class Chunk {
 public:
     /** Append the byte to this chunk of bytecode, and provide the line number */
     void write(std::uint8_t byte, std::size_t line);
+    /** Patch the byte at the given offset, assumed to have been previously written to */
+    void patch_at(std::size_t offset, std::uint8_t byte);
     /** Append the constant to this chunk's constant array, returning it's index */
     std::size_t add_constant(Value value);
     void dissassemble(const char* name);
@@ -48,6 +52,7 @@ private:
     
     static std::size_t simple_instruction(const char* name, std::size_t offset);
     static std::size_t byte_instruction(const char* name, const Chunk& chunk, std::size_t offset);
+    static std::size_t jump_instruction(const char* name, bool is_forward, const Chunk& chunk, std::size_t offset);
     static std::size_t constant_instruction(const char* name, const Chunk& chunk, std::size_t offset);
 };
 
