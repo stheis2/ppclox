@@ -1,9 +1,9 @@
 var some_boolean = false;
-if (some_boolean) {
+if (some_boolean and true) {
     print "was true";
 }
 
-if (some_boolean) {
+if (some_boolean or false) {
     print "was true";
 }
 else {

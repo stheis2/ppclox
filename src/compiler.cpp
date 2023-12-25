@@ -33,7 +33,7 @@ ParseRule Compiler::s_rules[] = {
     {variable,    nullptr,   Precedence::NONE},         // [TokenType::IDENTIFIER]    
     {string,      nullptr,   Precedence::NONE},         // [TokenType::STRING]        
     {number,      nullptr,   Precedence::NONE},         // [TokenType::NUMBER]        
-    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::AND]           
+    {nullptr,     and_,      Precedence::AND},          // [TokenType::AND]           
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::CLASS]         
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::ELSE]          
     {literal,     nullptr,   Precedence::NONE},         // [TokenType::FALSE]         
@@ -41,7 +41,7 @@ ParseRule Compiler::s_rules[] = {
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::FUN]           
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::IF]            
     {literal,     nullptr,   Precedence::NONE},         // [TokenType::NIL]           
-    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::OR]            
+    {nullptr,     or_,       Precedence::OR},           // [TokenType::OR]            
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::PRINT]         
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::RETURN]        
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::SUPER]         
@@ -353,6 +353,25 @@ void Compiler::mark_initialized() {
     current().m_locals.at(current().m_locals.size() - 1).depth = current().scope_depth;
 }
 
+void Compiler::and_(bool can_assign) {
+    std::size_t end_jump = emit_jump(OpCode::JUMP_IF_FALSE);
+
+    emit_opcode(OpCode::POP);
+    parse_precedence(Precedence::AND);
+
+    patch_jump(end_jump);
+}
+
+void Compiler::or_(bool can_assign) {
+    std::size_t else_jump = emit_jump(OpCode::JUMP_IF_FALSE);
+    std::size_t end_jump = emit_jump(OpCode::JUMP);
+
+    patch_jump(else_jump);
+    emit_opcode(OpCode::POP);
+
+    parse_precedence(Precedence::OR);
+    patch_jump(end_jump);
+}
 
 void Compiler::binary(bool can_assign) {
     TokenType operator_type = s_parser->previous.type;

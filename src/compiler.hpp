@@ -109,6 +109,8 @@ private:
     static void declare_variable();
     static void define_variable(std::uint8_t global);
     static void mark_initialized();
+    static void and_(bool can_assign);
+    static void or_(bool can_assign);
     static void binary(bool can_assign);
     static void literal(bool can_assign);
     static void grouping(bool can_assign);
