@@ -3,7 +3,6 @@
 
 #include <memory>
 
-//#include "chunk.hpp"
 #include "object.hpp"
 #include "object_string.hpp"
 
@@ -17,7 +16,11 @@ enum class FunctionType {
 
 class ObjFunction : public Obj {
 public:
-    ObjFunction() : Obj(ObjType::FUNCTION), m_chunk(std::make_unique<Chunk>()) {}
+    /** 
+     * Why do we pass in a shared pointer instead of directly living in the class?
+     * Well it helps us to avoid circular dependencies.
+     */
+    ObjFunction(std::shared_ptr<Chunk> chunk) : Obj(ObjType::FUNCTION), m_chunk(chunk) {}
 
     void print() const override;
 
@@ -26,12 +29,7 @@ public:
     const char* name() const { return m_name != nullptr ? m_name->chars() : "<script>"; };
 private:
     std::size_t m_arity{};
-    /** 
-     * Why make this a unique pointer instead of directly living in the class?
-     * Well it helps us to avoid circular dependencies.
-     */
-    std::unique_ptr<Chunk> m_chunk{};
-    //Chunk m_chunk{};
+    std::shared_ptr<Chunk> m_chunk{};
     /** @todo Can we make this safer than a raw pointer somehow? */
     ObjString* m_name{};
 };

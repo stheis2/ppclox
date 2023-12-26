@@ -83,7 +83,11 @@ ObjFunction* Compiler::compile(const char* source) {
 }
 
 Compiler::Compiler(FunctionType function_type) : 
-    m_function(new ObjFunction()), m_function_type(function_type) {}
+    m_function_type(function_type) {
+    // Make a new chunk and function to compile into
+    std::shared_ptr<Chunk> chunk = std::make_shared<Chunk>();
+    m_function = new ObjFunction(chunk);
+}
 
 void Compiler::error_at(const Token& token, const char* message) {
     if (s_parser->panic_mode) return;
