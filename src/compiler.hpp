@@ -7,6 +7,7 @@
 #include "chunk.hpp"
 #include "scanner.hpp"
 #include "object.hpp"
+#include "object_string.hpp"
 
 class Parser {
 public:

@@ -3,6 +3,7 @@
 
 #include "common.hpp"
 #include "object.hpp"
+#include "object_string.hpp"
 
 enum class ValueType {
     BOOL,
