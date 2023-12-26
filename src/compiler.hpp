@@ -125,6 +125,7 @@ private:
     static void statement();
     static void var_declaration();
     static void print_statement();
+    static void for_statement();
     static void if_statement();
     static void while_statement();
     static void block();

@@ -1,3 +1,5 @@
+#include <optional>
+
 #include "compiler.hpp"
 
 /** Zero initialize these to start */
@@ -525,6 +527,8 @@ void Compiler::declaration() {
 void Compiler::statement() {
     if (match(TokenType::PRINT)) {
         print_statement();
+    } else if (match(TokenType::FOR)) {
+        for_statement();
     } else if (match(TokenType::IF)) {
         if_statement();
     } else if (match(TokenType::WHILE)) {
@@ -555,6 +559,51 @@ void Compiler::print_statement() {
     expression();
     consume(TokenType::SEMICOLON, "Expect ';' after value in print statement.");
     emit_opcode(OpCode::PRINT);
+}
+
+void Compiler::for_statement() {
+    begin_scope();
+    consume(TokenType::LEFT_PAREN, "Expect '(' after 'for'.");
+    if (match(TokenType::SEMICOLON)) {
+        // No initializer.
+    } else if (match(TokenType::VAR)) {
+        var_declaration();
+    } else {
+        expression_statement();
+    }
+
+    std::size_t loop_start = current_chunk()->get_code().size();
+    std::optional<std::size_t> exit_jump = std::nullopt;
+    if (!match(TokenType::SEMICOLON)) {
+        expression();
+        consume(TokenType::SEMICOLON, "expect ';' after loop condition.");
+
+        // Jump out of the loop if the condition is false
+        exit_jump = emit_jump(OpCode::JUMP_IF_FALSE);
+        emit_opcode(OpCode::POP);
+    }
+
+    if (!match(TokenType::RIGHT_PAREN)) {
+        std::size_t body_jump = emit_jump(OpCode::JUMP);
+        std::size_t increment_start = current_chunk()->get_code().size();
+        expression();
+        emit_opcode(OpCode::POP);
+        consume(TokenType::RIGHT_PAREN, "Expect ')' after for clauses.");
+
+        emit_loop(loop_start);
+        loop_start = increment_start;
+        patch_jump(body_jump);
+    }
+
+    statement();
+    emit_loop(loop_start);
+
+    if (exit_jump != std::nullopt) {
+        patch_jump(exit_jump.value());
+        emit_opcode(OpCode::POP);
+    }
+
+    end_scope();
 }
 
 void Compiler::if_statement() {
