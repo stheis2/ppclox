@@ -16,21 +16,14 @@ VM::VM() {
 VM::~VM() { }
 
 InterpretResult VM::interpret(const char* source) {
-    auto chunk_ptr = std::make_shared<Chunk>();
+    ObjFunction* function = Compiler::compile(source);
+    if (function == nullptr) return InterpretResult::COMPILE_ERROR;
 
-    if (!Compiler::compile(source, chunk_ptr)) {
-        return InterpretResult::COMPILE_ERROR;
-    }
+    // Set up our initial call frame
+    push(function);
+    m_call_stack.emplace_back(function, 0);
 
-    // If everything successfully compiles, assign this
-    // as our chunk, and start executing it.
-    m_chunk = chunk_ptr;
-    m_ip = m_chunk->get_code().data();
-    InterpretResult result = run();
-    // Now that we are done with the chunk, reset our state to remove our reference to it
-    m_chunk = nullptr;
-    m_ip = nullptr;
-    return result;
+    return run();
 }
 
 void VM::reset_stack() {
@@ -46,9 +39,9 @@ void VM::runtime_error(const char* format, ...) {
     fputs("\n", stderr);
 
     // Get the instruction that was in the process of being executed
-    size_t instruction = m_ip - m_chunk->get_code().data() - 1;
-    int line = m_chunk->get_lines()[instruction];
-    fprintf(stderr, "[line %d] in script\n", line);
+    size_t instruction = current_frame().current_instruction_offset();
+    std::size_t line = current_frame().m_function->chunk().get_lines().at(instruction);
+    fprintf(stderr, "[line %zd] in script\n", line);
     reset_stack();
 }
 
@@ -77,7 +70,7 @@ InterpretResult VM::run() {
             printf(" ]");
         }
         printf("\n");
-        m_chunk->disassemble_instruction((m_ip - m_chunk->get_code().data()));
+        current_frame().disassemble_instruction();
 #endif
         uint8_t instruction = read_byte();
 
@@ -96,7 +89,7 @@ InterpretResult VM::run() {
                 // Push copy of the local to the top of the stack where
                 // other instructions will be able to find it.
                 // We're not a register based VM, so we must use the stack.
-                push(m_stack[slot]);
+                push(m_stack[current_frame().m_value_stack_base_index + slot]);
                 break;
             }
             case std::to_underlying(OpCode::SET_LOCAL): {
@@ -104,7 +97,7 @@ InterpretResult VM::run() {
                 // Store the top of the stack back into the local.
                 // Since an assignment is an expression, we leave the
                 // resulting value on the top of the stack.
-                m_stack[slot] = peek(0);
+                m_stack[current_frame().m_value_stack_base_index + slot] = peek(0);
                 break;
             }
             case std::to_underlying(OpCode::GET_GLOBAL): {
@@ -225,17 +218,17 @@ InterpretResult VM::run() {
             }
             case std::to_underlying(OpCode::JUMP): {
                 std::uint16_t offset = read_short();
-                m_ip += offset;
+                current_frame().m_ip += offset;
                 break;
             }
             case std::to_underlying(OpCode::JUMP_IF_FALSE): {
                 std::uint16_t offset = read_short();
-                if (peek(0).is_falsey()) m_ip += offset;
+                if (peek(0).is_falsey()) current_frame().m_ip += offset;
                 break;
             }
             case std::to_underlying(OpCode::LOOP): {
                 std::uint16_t offset = read_short();
-                m_ip -= offset;
+                current_frame().m_ip -= offset;
                 break;
             }
             case std::to_underlying(OpCode::RETURN): {

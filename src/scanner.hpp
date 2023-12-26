@@ -42,6 +42,11 @@ public:
     std::size_t length{};
     std::size_t line{};
 
+    Token() {
+        /** A default constructed Token should point to a valid, but empty c-style string. */
+        start = ""; 
+    }
+
     const std::string_view as_string_view() const { return std::string_view(start, length); }
 };
 

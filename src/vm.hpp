@@ -4,8 +4,35 @@
 #include <memory>
 
 #include "chunk.hpp"
+#include "object_function.hpp"
 
 #define VALUE_STACK_INIT_CAPACITY 256
+
+class CallFrame {
+public:
+    ObjFunction* m_function{};
+    /** If non-null, this is a pointer into the chunk's code */
+    /** @todo Is there any way to make this safer? Maybe using an iterator? */
+    const std::uint8_t* m_ip{};
+    /** Base index into the VM's value stack for this call frame's locals etc. */
+    std::size_t m_value_stack_base_index;
+
+    CallFrame(ObjFunction* function, std::size_t value_stack_base_index) : 
+        m_function(function), m_ip(function->chunk().get_code().data()), m_value_stack_base_index(value_stack_base_index) {}
+
+    std::size_t next_instruction_offset() {
+        return m_ip - m_function->chunk().get_code().data();
+    }
+
+    /** Offset of currently executing instruction. Assumes at least 1 instruction has been read. */
+    std::size_t current_instruction_offset() {
+        return m_ip - m_function->chunk().get_code().data() - 1;
+    }
+
+    void disassemble_instruction() {
+        m_function->chunk().disassemble_instruction(next_instruction_offset());
+    }
+};
 
 enum class InterpretResult {
     OK,
@@ -20,10 +47,7 @@ public:
 
     InterpretResult interpret(const char* source);
 private:
-    std::shared_ptr<Chunk> m_chunk{};
-    /** If non-null, this is a pointer into the chunk's code */
-    /** @todo Is there any way to make this safer? Maybe using an iterator? */
-    const std::uint8_t* m_ip{};
+    std::vector<CallFrame> m_call_stack{};
     std::vector<Value> m_stack{};
     std::unordered_map<ObjStringRef, Value, ObjStringRefHash> m_globals{};
 
@@ -35,14 +59,19 @@ private:
 
     InterpretResult run();
 
+    /** 
+     * Get reference to current call frame.
+     * NOTE! Caller must ensure that there IS a call frame to get!
+    */
+    CallFrame& current_frame() { return m_call_stack.back(); }
     /** Return the current byte pointed to, and increment the IP */
-    std::uint8_t read_byte() { return *(m_ip++); }
+    std::uint8_t read_byte() { return *(current_frame().m_ip++); }
     /** Return the short pointed to, and increment the IP to after it */
     std::uint16_t read_short() {
-        m_ip += 2;
+        current_frame().m_ip += 2;
         // Read the HO byte, followed by the LO byte
-        std::uint16_t ho_byte = m_ip[-2];
-        std::uint16_t lo_byte = m_ip[-1];
+        std::uint16_t ho_byte = current_frame().m_ip[-2];
+        std::uint16_t lo_byte = current_frame().m_ip[-1];
         return (ho_byte << 8) | lo_byte;
     }
     /** 
@@ -51,7 +80,7 @@ private:
      * NOTE! We do not do any bounds checking here to ensure fast execution, so it's 
      * important that the compiled code produce correct, in-bound indexes.
      */
-    Value read_constant() { return m_chunk->get_constants()[this->read_byte()]; }
+    Value read_constant() { return current_frame().m_function->chunk().get_constants()[this->read_byte()]; }
     ObjString* read_string() { return read_constant().as_string(); }
     bool verify_binary_op_types();
 };

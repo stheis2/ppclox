@@ -6,7 +6,6 @@
 std::unique_ptr<Scanner> Compiler::s_scanner{};
 std::unique_ptr<Parser> Compiler::s_parser{};
 std::vector<Compiler> Compiler::s_compilers{};
-std::shared_ptr<Chunk> Compiler::s_current_chunk{};
 
 // NOTE! Unfortunately C++ doesn't support array initialization
 //       with enum indices, so we must resort to comments.
@@ -55,32 +54,36 @@ ParseRule Compiler::s_rules[] = {
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::END_OF_FILE]   
 };
 
-bool Compiler::compile(const char* source, const std::shared_ptr<Chunk>& chunk) {
+ObjFunction* Compiler::compile(const char* source) {
     // Create a scanner and parser we can use for this source
     s_scanner = std::make_unique<Scanner>(source);
     s_parser = std::make_unique<Parser>();
 
     // Create our initial compiler on the compiler stack
-    s_compilers.emplace_back();
+    s_compilers.emplace_back(FunctionType::SCRIPT);
 
-    // Store our chunk while we operate on it
-    s_current_chunk = chunk;
+    // From now on, the compiler implicitly claims stack slot zero
+    // for the VM's own internal use. It does this in form of a dummy local.
+    Token dummy{};
+    current().add_local(dummy);
 
     advance();
     while (!match(TokenType::END_OF_FILE)) {
         declaration();
     }
-    end_compiler();
+    ObjFunction* function = end_compiler();
     bool had_error = s_parser->had_error;
 
     // Now that we are done compiling, destroy the scanner and parser,
     // and release our reference to the chunk
     s_scanner = nullptr;
     s_parser = nullptr;
-    s_current_chunk = nullptr;
 
-    return !had_error;
+    return had_error ? nullptr : function;
 }
+
+Compiler::Compiler(FunctionType function_type) : 
+    m_function(new ObjFunction()), m_function_type(function_type) {}
 
 void Compiler::error_at(const Token& token, const char* message) {
     if (s_parser->panic_mode) return;
@@ -171,7 +174,7 @@ bool Compiler::match(TokenType type) {
 }
 
 void Compiler::emit_byte(std::uint8_t byte) {
-    current_chunk()->write(byte, s_parser->previous.line);
+    current_chunk().write(byte, s_parser->previous.line);
 }
 
 void Compiler::emit_opcode(OpCode op_code) {
@@ -188,14 +191,14 @@ std::size_t Compiler::emit_jump(OpCode instruction) {
     // Emit two bytes that will be filled in later
     emit_byte(0xff);
     emit_byte(0xff);
-    return current_chunk()->get_code().size() - 2;
+    return current_chunk().get_code().size() - 2;
 }
 
 void Compiler::patch_jump(std::size_t offset) {
     // -2 to adjust for the bytecode for the jump offset itself.
     // The given offset is to the jump offset, but the jump is relative to
     // AFTER the jump offset.
-    std::size_t jump = current_chunk()->get_code().size() - offset - 2;
+    std::size_t jump = current_chunk().get_code().size() - offset - 2;
 
     if (jump > std::numeric_limits<std::uint16_t>::max()) {
         error("Too much code to jump over.");
@@ -204,8 +207,8 @@ void Compiler::patch_jump(std::size_t offset) {
     std::uint8_t ho_byte = static_cast<std::uint8_t>((jump >> 8) & 0xff);
     std::uint8_t lo_byte = static_cast<std::uint8_t>(jump & 0xff);
 
-    current_chunk()->patch_at(offset, ho_byte);
-    current_chunk()->patch_at(offset + 1, lo_byte);
+    current_chunk().patch_at(offset, ho_byte);
+    current_chunk().patch_at(offset + 1, lo_byte);
 }
 
 void Compiler::emit_loop(std::size_t loop_start) {
@@ -213,7 +216,7 @@ void Compiler::emit_loop(std::size_t loop_start) {
 
     // +2 is to take into account the size of the OpCode::LOOP operands
     // which we also need to jump over.
-    std::size_t offset = current_chunk()->get_code().size() - loop_start + 2;
+    std::size_t offset = current_chunk().get_code().size() - loop_start + 2;
     if (offset > std::numeric_limits<std::uint16_t>::max()) {
         error("Loop body too large.");
     }
@@ -230,7 +233,7 @@ void Compiler::emit_return() {
 }
 
 std::uint8_t Compiler::make_constant(Value value) {
-    std::size_t index = current_chunk()->add_constant(value);
+    std::size_t index = current_chunk().add_constant(value);
     if (index > std::numeric_limits<std::uint8_t>::max()) {
         // NOTE! If this were a full-sized language implementation, we’d want to add another 
         //       instruction like OP_CONSTANT_16 that stores the index as a two-byte operand 
@@ -279,13 +282,17 @@ void Compiler::add_local(Token name) {
 }
 
 
-void Compiler::end_compiler() {
+ObjFunction* Compiler::end_compiler() {
     emit_return();
+    ObjFunction* function = current().m_function;
+
 #ifdef DEBUG_PRINT_CODE
     if (!s_parser->had_error) {
-        current_chunk()->dissassemble("code");
+        current_chunk().dissassemble(function->name());
     }
-#endif    
+#endif
+
+    return function;
 }
 
 void Compiler::begin_scope() {
@@ -572,7 +579,7 @@ void Compiler::for_statement() {
         expression_statement();
     }
 
-    std::size_t loop_start = current_chunk()->get_code().size();
+    std::size_t loop_start = current_chunk().get_code().size();
     std::optional<std::size_t> exit_jump = std::nullopt;
     if (!match(TokenType::SEMICOLON)) {
         expression();
@@ -585,7 +592,7 @@ void Compiler::for_statement() {
 
     if (!match(TokenType::RIGHT_PAREN)) {
         std::size_t body_jump = emit_jump(OpCode::JUMP);
-        std::size_t increment_start = current_chunk()->get_code().size();
+        std::size_t increment_start = current_chunk().get_code().size();
         expression();
         emit_opcode(OpCode::POP);
         consume(TokenType::RIGHT_PAREN, "Expect ')' after for clauses.");
@@ -624,7 +631,7 @@ void Compiler::if_statement() {
 }
 
 void Compiler::while_statement() {
-    std::size_t loop_start = current_chunk()->get_code().size();
+    std::size_t loop_start = current_chunk().get_code().size();
     consume(TokenType::LEFT_PAREN, "Expect '(' after 'while'.");
     expression();
     consume(TokenType::RIGHT_PAREN, "Expect ')' after condition,");
