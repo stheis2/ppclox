@@ -18,7 +18,10 @@ class ObjFunction : public Obj {
 public:
     /** 
      * Why do we pass in a shared pointer instead of directly living in the class?
-     * Well it helps us to avoid circular dependencies.
+     * Well it helps us to avoid circular dependencies. I tried it with unique_ptr
+     * and that didn't work. Probably should reconsider the design to avoid these
+     * circular dependencies, but I don't want to deviate from the Clox architecture
+     * too much until after its been fully ported.
      */
     ObjFunction(std::shared_ptr<Chunk> chunk) : Obj(ObjType::FUNCTION), m_chunk(chunk) {}
 
