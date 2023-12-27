@@ -124,6 +124,8 @@ private:
     static void and_(bool can_assign);
     static void or_(bool can_assign);
     static void binary(bool can_assign);
+    static void call(bool can_assign);
+    static std::uint8_t argument_list();
     static void literal(bool can_assign);
     static void grouping(bool can_assign);
     static void number(bool can_assign);

@@ -21,7 +21,7 @@ InterpretResult VM::interpret(const char* source) {
 
     // Set up our initial call frame
     push(function);
-    m_call_stack.emplace_back(function, 0);
+    call(function, 0);
 
     return run();
 }
@@ -38,10 +38,13 @@ void VM::runtime_error(const char* format, ...) {
     va_end(args);
     fputs("\n", stderr);
 
-    // Get the instruction that was in the process of being executed
-    size_t instruction = current_frame().current_instruction_offset();
-    std::size_t line = current_frame().m_function->chunk().get_lines().at(instruction);
-    fprintf(stderr, "[line %zd] in script\n", line);
+    for (auto frame_it = m_call_stack.rbegin(); frame_it != m_call_stack.rend(); ++frame_it) {
+        // Get the instruction that was in the process of being executed
+        size_t instruction = frame_it->current_instruction_offset();
+        std::size_t line = frame_it->m_function->chunk().get_lines().at(instruction);
+        fprintf(stderr, "[line %zd] in %s()\n", line, frame_it->m_function->name());
+    }
+    
     reset_stack();
 }
 
@@ -59,6 +62,39 @@ Value VM::pop() {
 Value VM::peek(std::size_t distance) {
     // TODO: Add bounds checking in debug builds?
     return m_stack[m_stack.size() - 1 - distance];
+}
+
+bool VM::call_value(Value callee, std::size_t arg_count) {
+    if (callee.is_obj()) {
+        switch (callee.obj_type()) {
+            case ObjType::FUNCTION:
+                return call(callee.as_function(), arg_count);
+            default:
+                // Non-callable object type
+                break;
+        }
+    }
+    runtime_error("Can only call functions and classes.");
+    return false;
+}
+
+bool VM::call(ObjFunction* function, std::size_t arg_count) {
+    if (arg_count != function->m_arity) {
+        runtime_error("Expected %zd arguments but got %zd.", function->m_arity, arg_count);
+        return false;
+    }
+
+    if (m_call_stack.size() >= k_max_call_frames) {
+        runtime_error("Call stack overflow.");
+        return false;
+    }
+
+    // Push a new call frame onto the stack.
+    // The base index for the new frame includes all the arguments, plus
+    // the function Value that was being called (which is pushed before all arguments).
+    std::size_t value_stack_base_index = m_stack.size() - arg_count - 1;
+    m_call_stack.emplace_back(function, value_stack_base_index);
+    return true;
 }
 
 InterpretResult VM::run() {
@@ -229,6 +265,16 @@ InterpretResult VM::run() {
             case std::to_underlying(OpCode::LOOP): {
                 std::uint16_t offset = read_short();
                 current_frame().m_ip -= offset;
+                break;
+            }
+            case std::to_underlying(OpCode::CALL): {
+                std::uint8_t arg_count = read_byte();
+                if (!call_value(peek(arg_count), arg_count)) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                // NOTE! If we were caching call frames some how instead
+                //       of going through the m_call_stack vector,
+                //       we would need to update that here.
                 break;
             }
             case std::to_underlying(OpCode::RETURN): {

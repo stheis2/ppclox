@@ -15,7 +15,7 @@ public:
     /** @todo Is there any way to make this safer? Maybe using an iterator? */
     const std::uint8_t* m_ip{};
     /** Base index into the VM's value stack for this call frame's locals etc. */
-    std::size_t m_value_stack_base_index;
+    std::size_t m_value_stack_base_index{};
 
     CallFrame(ObjFunction* function, std::size_t value_stack_base_index) : 
         m_function(function), m_ip(function->chunk().get_code().data()), m_value_stack_base_index(value_stack_base_index) {}
@@ -47,6 +47,12 @@ public:
 
     InterpretResult interpret(const char* source);
 private:
+    /** 
+     * There should be a practical limit on the number of stack frames so as to
+     * detect runaway recursion and avoid memory exhaustion.
+    */
+    static constexpr std::size_t k_max_call_frames = 1024;
+
     std::vector<CallFrame> m_call_stack{};
     std::vector<Value> m_stack{};
     std::unordered_map<ObjStringRef, Value, ObjStringRefHash> m_globals{};
@@ -56,6 +62,8 @@ private:
     void push(Value value);
     Value pop();
     Value peek(std::size_t distance);
+    bool call_value(Value callee, std::size_t arg_count);
+    bool call(ObjFunction* function, std::size_t arg_count);
 
     InterpretResult run();
 

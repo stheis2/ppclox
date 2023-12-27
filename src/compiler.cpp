@@ -12,7 +12,7 @@ std::vector<Compiler> Compiler::s_compilers{};
 //       Make sure any changes to the TokenType enum get reflected here!
 // TODO: Maybe switch to a map and generate the array at compilation start.
 ParseRule Compiler::s_rules[] = {
-    {grouping,    nullptr,   Precedence::NONE},         // [TokenType::LEFT_PAREN]
+    {grouping,    call,      Precedence::CALL},         // [TokenType::LEFT_PAREN]
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::RIGHT_PAREN]
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::LEFT_BRACE]     
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::RIGHT_BRACE]   
@@ -450,6 +450,26 @@ void Compiler::binary(bool can_assign) {
             error("Unhandled operator type after compiling binary expressions.");
             return;
     }
+}
+
+void Compiler::call(bool can_assign) {
+    std::uint8_t arg_count = argument_list();
+    emit_opcode_arg(OpCode::CALL, arg_count);
+}
+
+std::uint8_t Compiler::argument_list() {
+    std::uint8_t arg_count = 0;
+    if (!check(TokenType::RIGHT_PAREN)) {
+        do {
+            expression();
+            if (arg_count == std::numeric_limits<std::uint8_t>::max()) {
+                error("Can't have more than 255 arguments");
+            }
+            arg_count++;
+        } while (match(TokenType::COMMA));
+    }
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments.");
+    return arg_count;
 }
 
 void Compiler::literal(bool can_assign) {
