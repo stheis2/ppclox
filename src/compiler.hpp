@@ -103,7 +103,7 @@ private:
     static std::size_t emit_jump(OpCode instruction);
     static void patch_jump(std::size_t offset);
     static void emit_loop(std::size_t loop_start);
-    static void emit_return();
+    static void emit_nil_return();
     /** Add constant to the current chunk and return its index */
     static std::uint8_t make_constant(Value value);
     static std::uint8_t identifier_constant(const Token& name);
@@ -142,6 +142,7 @@ private:
     static void print_statement();
     static void for_statement();
     static void if_statement();
+    static void return_statement();
     static void while_statement();
     static void block();
     static void expression_statement();

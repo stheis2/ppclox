@@ -241,7 +241,7 @@ void Compiler::emit_loop(std::size_t loop_start) {
     emit_byte(lo_byte);
 }
 
-void Compiler::emit_return() {
+void Compiler::emit_nil_return() {
     /** If a function does not explicitly return, it returns nil */
     emit_opcode(OpCode::NIL);
     emit_opcode(OpCode::RETURN);
@@ -298,7 +298,7 @@ void Compiler::add_local(Token name) {
 
 
 ObjFunction* Compiler::end_compiler() {
-    emit_return();
+    emit_nil_return();
     ObjFunction* function = current().m_function;
 
 #ifdef DEBUG_PRINT_CODE
@@ -580,6 +580,8 @@ void Compiler::statement() {
         for_statement();
     } else if (match(TokenType::IF)) {
         if_statement();
+    } else if (match(TokenType::RETURN)) {
+        return_statement();
     } else if (match(TokenType::WHILE)) {
         while_statement();
     } else if (match(TokenType::LEFT_BRACE)) {
@@ -708,6 +710,20 @@ void Compiler::if_statement() {
 
     if (match(TokenType::ELSE)) statement();
     patch_jump(else_jump);
+}
+
+void Compiler::return_statement() {
+    if (current().m_function_type == FunctionType::SCRIPT) {
+        error("Can't return from top-level code.");
+    }
+
+    if (match(TokenType::SEMICOLON)) {
+        emit_nil_return();
+    } else {
+        expression();
+        consume(TokenType::SEMICOLON, "Expect ';' after return value.");
+        emit_opcode(OpCode::RETURN);
+    }
 }
 
 void Compiler::while_statement() {
