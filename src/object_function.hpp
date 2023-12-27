@@ -8,6 +8,7 @@
 
 // We need to forward declare this due to circular dependencies
 class Chunk;
+class Value;
 
 enum class FunctionType {
     FUNCTION,
@@ -35,6 +36,18 @@ private:
     std::shared_ptr<Chunk> m_chunk{};
     /** @todo Can we make this safer than a raw pointer somehow? */
     ObjString* m_name{};
+};
+
+typedef std::vector<Value>::iterator NativeFnArgsIterator;
+typedef Value (*NativeFn)(std::size_t arg_count, NativeFnArgsIterator args_start, NativeFnArgsIterator args_end);
+
+class ObjNative : public Obj {
+public:
+    ObjNative(NativeFn function) : Obj(ObjType::NATIVE), m_function(function) {}
+    void print() const override { printf("<native fn>"); }
+    NativeFn function() { return m_function; }
+private:
+    NativeFn m_function{};
 };
 
 #endif

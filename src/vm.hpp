@@ -59,6 +59,7 @@ private:
 
     void reset_stack();
     void runtime_error(const char* format, ...);
+    void define_native(const char* name, NativeFn function);
     void push(Value value);
     Value pop();
     Value peek(std::size_t distance);

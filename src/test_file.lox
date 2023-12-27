@@ -1,6 +1,11 @@
-fun noReturn() {
-  print "Do stuff";
-  return "some other stuff!";
+fun fib(n) {
+  if (n < 2) return n;
+  return fib(n - 2) + fib(n - 1);
 }
 
-print noReturn(); // ???
+var start = clock();
+for (var i = 0; i < 10; i = i + 1) {
+  print fib(i);
+}
+
+print clock() - start;

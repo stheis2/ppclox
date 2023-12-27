@@ -11,6 +11,7 @@
 
 enum class ObjType {
     FUNCTION,
+    NATIVE,
     STRING
 };
 

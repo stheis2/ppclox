@@ -1,5 +1,6 @@
 #include <memory>
 #include <cstdarg>
+#include <ctime>
 
 #include "common.hpp"
 #include "compiler.hpp"
@@ -9,9 +10,18 @@
 // TODO: Refactor to make this not global somehow
 VM g_vm;
 
+// If we had more native functions, they would probably
+// go into their own file, but we have just one.
+static Value clock_native(std::size_t arg_count, NativeFnArgsIterator start, NativeFnArgsIterator end) {
+    return Value((double)clock() / CLOCKS_PER_SEC);
+}
+
 VM::VM() {
     // Set our initial capacities
     reset_stack();
+
+    // Define our native functions
+    define_native("clock", clock_native);
 }
 VM::~VM() { }
 
@@ -48,6 +58,25 @@ void VM::runtime_error(const char* format, ...) {
     reset_stack();
 }
 
+void VM::define_native(const char* name, NativeFn function) {
+    // Push objects after they are allocated to make sure the
+    // GC won't collect them.
+    ObjString* name_obj = ObjString::copy_string(name, strlen(name));
+    push(name_obj);
+    ObjNative* native = new ObjNative(function);
+    push(native);
+
+    auto it = m_globals.find(ObjStringRef(name_obj));
+    if (it != m_globals.end()) {
+        throw std::runtime_error("Native function with duplicate name.");
+    }
+    m_globals[ObjStringRef(name_obj)] = Value(native);
+
+    // Clean up stack now that the fcn is safely inserted
+    pop();
+    pop();
+}
+
 void VM::push(Value value) {
     m_stack.push_back(value);
 }
@@ -69,6 +98,15 @@ bool VM::call_value(Value callee, std::size_t arg_count) {
         switch (callee.obj_type()) {
             case ObjType::FUNCTION:
                 return call(callee.as_function(), arg_count);
+            case ObjType::NATIVE: {
+                NativeFn native = callee.as_native()->function();
+                Value result = native(arg_count, m_stack.end() - arg_count, m_stack.end());
+                // Clean up the value stack for this call.
+                // NOTE! We must erase the args along with the native function that was pushed on the stack
+                m_stack.erase(m_stack.end() - (arg_count + 1), m_stack.end());
+                push(result);
+                return true;
+            }
             default:
                 // Non-callable object type
                 break;
