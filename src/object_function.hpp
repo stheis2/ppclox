@@ -23,15 +23,15 @@ public:
      * circular dependencies, but I don't want to deviate from the Clox architecture
      * too much until after its been fully ported.
      */
-    ObjFunction(std::shared_ptr<Chunk> chunk) : Obj(ObjType::FUNCTION), m_chunk(chunk) {}
+    ObjFunction(std::shared_ptr<Chunk> chunk, ObjString* name) : Obj(ObjType::FUNCTION), m_chunk(chunk), m_name(name) {}
 
     void print() const override;
 
     /** Return a mutable reference to the Chunk for writing, etc. */
     Chunk& chunk() { return *m_chunk; };
+    std::size_t m_arity{};
     const char* name() const { return m_name != nullptr ? m_name->chars() : "<script>"; };
 private:
-    std::size_t m_arity{};
     std::shared_ptr<Chunk> m_chunk{};
     /** @todo Can we make this safer than a raw pointer somehow? */
     ObjString* m_name{};

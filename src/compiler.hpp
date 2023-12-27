@@ -134,6 +134,8 @@ private:
     static void expression();
     static void declaration();
     static void statement();
+    static void fun_declaration();
+    static void function(FunctionType type);
     static void var_declaration();
     static void print_statement();
     static void for_statement();

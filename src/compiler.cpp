@@ -86,7 +86,16 @@ Compiler::Compiler(FunctionType function_type) :
     m_function_type(function_type) {
     // Make a new chunk and function to compile into
     std::shared_ptr<Chunk> chunk = std::make_shared<Chunk>();
-    m_function = new ObjFunction(chunk);
+
+    // When compiling a function declaration, we call Compiler() ctor right 
+    // after we parse the function’s name. That means we can grab the name 
+    // right then from the previous token.
+    ObjString* name = nullptr;
+    if (function_type != FunctionType::SCRIPT) {
+        name = ObjString::copy_string(s_parser->previous.start, s_parser->previous.length);
+    }
+
+    m_function = new ObjFunction(chunk, name);
 }
 
 void Compiler::error_at(const Token& token, const char* message) {
@@ -296,6 +305,8 @@ ObjFunction* Compiler::end_compiler() {
     }
 #endif
 
+    // Pop the compiler that compiled this function from the stack
+    s_compilers.pop_back();
     return function;
 }
 
@@ -380,6 +391,9 @@ void Compiler::define_variable(std::uint8_t global) {
 }
 
 void Compiler::mark_initialized() {
+    // This may be called when compiling functions declared at the top level,
+    // so bail early in that case.
+    if (current().scope_depth == 0) return;
     current().m_locals.at(current().m_locals.size() - 1).depth = current().scope_depth;
 }
 
@@ -526,7 +540,9 @@ void Compiler::expression() {
 }
 
 void Compiler::declaration() {
-    if (match(TokenType::VAR)) {
+    if (match(TokenType::FUN)) {
+        fun_declaration();
+    } else if (match(TokenType::VAR)) {
         var_declaration();
     } else {
         statement();
@@ -552,6 +568,44 @@ void Compiler::statement() {
     else {
         expression_statement();
     }
+}
+
+void Compiler::fun_declaration() {
+    std::uint8_t global = parse_variable("Expect function name.");
+    // It’s safe for a function to refer to its own name inside its body. 
+    // You can’t call the function and execute the body until after it’s fully defined, 
+    // so you’ll never see the variable in an uninitialized state.
+    mark_initialized();
+    function(FunctionType::FUNCTION);
+    define_variable(global);
+}
+
+void Compiler::function(FunctionType type) {
+    // When we start compiling a function, we need
+    // to instantiate a new compiler on the stack.
+    s_compilers.emplace_back(type);
+    begin_scope();
+
+    consume(TokenType::LEFT_PAREN, "Expect '(' after function name.");
+    if (!check(TokenType::RIGHT_PAREN)) {
+        do {
+            current().m_function->m_arity++;
+            if (current().m_function->m_arity > std::numeric_limits<std::uint8_t>::max()) {
+                error_at_current("Can't have more than 255 parameters.");
+            }
+            std::uint8_t constant = parse_variable("Expect parameter name.");
+            define_variable(constant);
+        } while (match(TokenType::COMMA));
+    }
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after parameters.");
+    consume(TokenType::LEFT_BRACE, "Expect '{' before function body.");
+    block();
+
+    // This beginScope() doesn’t have a corresponding endScope() call. 
+    // Because we end Compiler completely when we reach the end of the function body, 
+    // there’s no need to close the lingering outermost scope.
+    ObjFunction* function = end_compiler();
+    emit_opcode_arg(OpCode::CONSTANT, make_constant(function));
 }
 
 void Compiler::var_declaration() {
