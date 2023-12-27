@@ -242,7 +242,9 @@ void Compiler::emit_loop(std::size_t loop_start) {
 }
 
 void Compiler::emit_return() {
-    return emit_opcode(OpCode::RETURN);
+    /** If a function does not explicitly return, it returns nil */
+    emit_opcode(OpCode::NIL);
+    emit_opcode(OpCode::RETURN);
 }
 
 std::uint8_t Compiler::make_constant(Value value) {

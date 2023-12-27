@@ -1,7 +1,6 @@
-fun a() { b(); }
-fun b() { c(); }
-fun c() {
-  c("too", "many");
+fun noReturn() {
+  print "Do stuff";
+  // No return here.
 }
 
-a();
+print noReturn(); // ???

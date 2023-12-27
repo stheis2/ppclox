@@ -278,8 +278,42 @@ InterpretResult VM::run() {
                 break;
             }
             case std::to_underlying(OpCode::RETURN): {
-                // Exit interpreter
-                return InterpretResult::OK;
+                // Pop the function return result from the stack.
+                Value result = pop();
+
+                // If this is the initial call frame...
+                if (m_call_stack.size() == 1) {
+                    // Clean up final frame
+                    m_call_stack.pop_back();
+
+                    // If there's more than one thing left on the value stack,
+                    // something is very wrong.
+                    if (m_stack.size() != 1) {
+                        printf("Unexpected value stack size on program termination: %zd\n", m_stack.size());
+                        reset_stack();
+                        return InterpretResult::RUNTIME_ERROR;
+                    }
+
+                    // Pop the initial function from the value stack
+                    pop();
+
+                    // Call and value stacks should now be empty, and we're done.
+                    return InterpretResult::OK;
+                }
+
+                // Clean up the value stack.
+                // We need to erase all elements of the topmost callframe upwards.
+                m_stack.erase(m_stack.begin() + current_frame().m_value_stack_base_index, m_stack.end());
+                // Clean up call stack
+                m_call_stack.pop_back();
+
+                // Push function return result back on the value stack for the caller to find.
+                push(result);
+
+                // NOTE! If we were caching call frames some how instead
+                //       of going through the m_call_stack vector,
+                //       we would need to update that here.
+                break;
             }
             default:
                 printf("Instruction not recognized: %d\n", instruction);
