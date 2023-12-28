@@ -128,7 +128,7 @@ private:
     static std::uint8_t add_upvalue(Compiler& compiler, std::uint8_t index, bool is_local);
     static std::uint8_t verify_index(std::size_t index, const char* message);
     static void add_local(Token name);
-    static ObjFunction* end_compiler();
+    static ObjFunction* end_compiler(std::vector<Upvalue>& out_upvalues);
 
     static void begin_scope();
     static void end_scope();

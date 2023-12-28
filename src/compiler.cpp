@@ -66,7 +66,8 @@ ObjFunction* Compiler::compile(const char* source) {
     while (!match(TokenType::END_OF_FILE)) {
         declaration();
     }
-    ObjFunction* function = end_compiler();
+    std::vector<Upvalue> out_upvalues{};
+    ObjFunction* function = end_compiler(out_upvalues);
     bool had_error = s_parser->had_error;
 
     // Now that we are done compiling, destroy the scanner and parser,
@@ -299,10 +300,22 @@ bool Compiler::resolve_upvalue(const CompilerRevIterator compiler_rev_iter, cons
     // We don't capture globals we only capture locals.
     if (enclosing == compilers_rend()) return false;
 
+    // Try to find a local in the enclosing scope
     std::uint8_t local_index{};
     if (resolve_local(*enclosing, name, local_index)) {
-        // Add the upvalue
+        // Add the upvalue to the current compiler
         out_index = add_upvalue(*compiler_rev_iter, local_index, true);
+        return true;
+    }
+
+    // Try to find an upvalue tracked in the enclosing scope.
+    // This will search the scopes recursively (backward) until we
+    // either find a local variable to capture, or hit the global scope.
+    // And we will add upvalues in the enclosing scopes on the way back down
+    std::uint8_t upvalue_index{};
+    if (resolve_upvalue(enclosing, name, upvalue_index)) {
+        // Add the upvalue to the current compiler
+        out_index = add_upvalue(*compiler_rev_iter, upvalue_index, false);
         return true;
     }
 
@@ -329,6 +342,9 @@ std::uint8_t Compiler::add_upvalue(Compiler& compiler, std::uint8_t index, bool 
         .index = index,
         .is_local = is_local
     });
+    // Be sure to update the function upvalue count!
+    compiler.m_function->m_upvalue_count++;
+
     std::size_t insert_index = compiler.m_upvalues.size() - 1;
     return verify_index(insert_index, error_msg);
 }
@@ -353,7 +369,7 @@ void Compiler::add_local(Token name) {
 }
 
 
-ObjFunction* Compiler::end_compiler() {
+ObjFunction* Compiler::end_compiler(std::vector<Upvalue>& out_upvalues) {
     emit_nil_return();
     ObjFunction* function = current().m_function;
 
@@ -362,6 +378,11 @@ ObjFunction* Compiler::end_compiler() {
         current_chunk().dissassemble(function->name());
     }
 #endif
+
+    // Before we destruct the topmost compiler, we need
+    // to hand off its upvalues for use outside of this function.
+    // Just move them since the compiler is about to be destructed anyway.
+    out_upvalues = std::move(current().m_upvalues);
 
     // Pop the compiler that compiled this function from the stack
     s_compilers.pop_back();
@@ -683,10 +704,17 @@ void Compiler::function(FunctionType type) {
     // This beginScope() doesn’t have a corresponding endScope() call. 
     // Because we end Compiler completely when we reach the end of the function body, 
     // there’s no need to close the lingering outermost scope.
-    ObjFunction* function = end_compiler();
+    std::vector<Upvalue> out_upvalues{};
+    ObjFunction* function = end_compiler(out_upvalues);
     // At runtime, create a closure wrapping the function and push it on 
     // the stack to be called
     emit_opcode_arg(OpCode::CLOSURE, make_constant(function));
+
+    // We also need to push info about all the upvalues needed by the Closure
+    for (auto upvalue : out_upvalues) {
+        emit_byte(upvalue.is_local ? 1 : 0);
+        emit_byte(upvalue.index);
+    }
 }
 
 void Compiler::var_declaration() {

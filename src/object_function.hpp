@@ -31,6 +31,7 @@ public:
     /** Return a mutable reference to the Chunk for writing, etc. */
     Chunk& chunk() { return *m_chunk; };
     std::size_t m_arity{};
+    std::size_t m_upvalue_count{};
     const char* name() const { return m_name != nullptr ? m_name->chars() : "<script>"; };
 private:
     std::shared_ptr<Chunk> m_chunk{};

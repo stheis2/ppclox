@@ -53,6 +53,10 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
             return constant_instruction("OP_DEFINE_GLOBAL", *this, offset);
         case std::to_underlying(OpCode::SET_GLOBAL):
             return constant_instruction("OP_SET_GLOBAL", *this, offset);
+        case std::to_underlying(OpCode::GET_UPVALUE):
+            return byte_instruction("OP_GET_UPVALUE", *this, offset);
+        case std::to_underlying(OpCode::SET_UPVALUE):
+            return byte_instruction("OP_SET_UPVALUE", *this, offset);
         case std::to_underlying(OpCode::EQUAL):
             return simple_instruction("OP_EQUAL", offset);
         case std::to_underlying(OpCode::GREATER):
@@ -130,5 +134,13 @@ std::size_t Chunk::closure_instruction(const char* name, const Chunk& chunk, std
     printf("%-16s %4d ", name, constant);
     chunk.get_constants().at(constant).print();
     printf("\n");
+
+    ObjFunction* function = chunk.get_constants().at(constant).as_function();
+    for (std::size_t j = 0; j < function->m_upvalue_count; j++) {
+        std::uint8_t is_local = chunk.get_code().at(offset++);
+        std::uint8_t index = chunk.get_code().at(offset++);
+        printf("%04zd      |                     %s %d\n",
+               offset - 2, is_local ? "local" : "upvalue", index);
+    }
     return offset;
 }
