@@ -79,6 +79,8 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
             return jump_instruction("OP_JUMP_IF_FALSE", true, *this, offset);
         case std::to_underlying(OpCode::LOOP):
             return jump_instruction("OP_LOOP", false, *this, offset);
+        case std::to_underlying(OpCode::CALL):
+            return byte_instruction("OP_CALL", *this, offset);
         case std::to_underlying(OpCode::RETURN):
             return simple_instruction("OP_RETURN", offset);
         default:

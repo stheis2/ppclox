@@ -1,5 +1,6 @@
 #include <memory>
 #include <cstdarg>
+#include <ctime>
 
 #include "common.hpp"
 #include "compiler.hpp"
@@ -9,28 +10,30 @@
 // TODO: Refactor to make this not global somehow
 VM g_vm;
 
+// If we had more native functions, they would probably
+// go into their own file, but we have just one.
+static Value clock_native(std::size_t arg_count, NativeFnArgsIterator start, NativeFnArgsIterator end) {
+    return Value((double)clock() / CLOCKS_PER_SEC);
+}
+
 VM::VM() {
     // Set our initial capacities
     reset_stack();
+
+    // Define our native functions
+    define_native("clock", clock_native);
 }
 VM::~VM() { }
 
 InterpretResult VM::interpret(const char* source) {
-    auto chunk_ptr = std::make_shared<Chunk>();
+    ObjFunction* function = Compiler::compile(source);
+    if (function == nullptr) return InterpretResult::COMPILE_ERROR;
 
-    if (!Compiler::compile(source, chunk_ptr)) {
-        return InterpretResult::COMPILE_ERROR;
-    }
+    // Set up our initial call frame
+    push(function);
+    call(function, 0);
 
-    // If everything successfully compiles, assign this
-    // as our chunk, and start executing it.
-    m_chunk = chunk_ptr;
-    m_ip = m_chunk->get_code().data();
-    InterpretResult result = run();
-    // Now that we are done with the chunk, reset our state to remove our reference to it
-    m_chunk = nullptr;
-    m_ip = nullptr;
-    return result;
+    return run();
 }
 
 void VM::reset_stack() {
@@ -45,11 +48,33 @@ void VM::runtime_error(const char* format, ...) {
     va_end(args);
     fputs("\n", stderr);
 
-    // Get the instruction that was in the process of being executed
-    size_t instruction = m_ip - m_chunk->get_code().data() - 1;
-    int line = m_chunk->get_lines()[instruction];
-    fprintf(stderr, "[line %d] in script\n", line);
+    for (auto frame_it = m_call_stack.rbegin(); frame_it != m_call_stack.rend(); ++frame_it) {
+        // Get the instruction that was in the process of being executed
+        size_t instruction = frame_it->current_instruction_offset();
+        std::size_t line = frame_it->m_function->chunk().get_lines().at(instruction);
+        fprintf(stderr, "[line %zd] in %s()\n", line, frame_it->m_function->name());
+    }
+    
     reset_stack();
+}
+
+void VM::define_native(const char* name, NativeFn function) {
+    // Push objects after they are allocated to make sure the
+    // GC won't collect them.
+    ObjString* name_obj = ObjString::copy_string(name, strlen(name));
+    push(name_obj);
+    ObjNative* native = new ObjNative(function);
+    push(native);
+
+    auto it = m_globals.find(ObjStringRef(name_obj));
+    if (it != m_globals.end()) {
+        throw std::runtime_error("Native function with duplicate name.");
+    }
+    m_globals[ObjStringRef(name_obj)] = Value(native);
+
+    // Clean up stack now that the fcn is safely inserted
+    pop();
+    pop();
 }
 
 void VM::push(Value value) {
@@ -68,6 +93,48 @@ Value VM::peek(std::size_t distance) {
     return m_stack[m_stack.size() - 1 - distance];
 }
 
+bool VM::call_value(Value callee, std::size_t arg_count) {
+    if (callee.is_obj()) {
+        switch (callee.obj_type()) {
+            case ObjType::FUNCTION:
+                return call(callee.as_function(), arg_count);
+            case ObjType::NATIVE: {
+                NativeFn native = callee.as_native()->function();
+                Value result = native(arg_count, m_stack.end() - arg_count, m_stack.end());
+                // Clean up the value stack for this call.
+                // NOTE! We must erase the args along with the native function that was pushed on the stack
+                m_stack.erase(m_stack.end() - (arg_count + 1), m_stack.end());
+                push(result);
+                return true;
+            }
+            default:
+                // Non-callable object type
+                break;
+        }
+    }
+    runtime_error("Can only call functions and classes.");
+    return false;
+}
+
+bool VM::call(ObjFunction* function, std::size_t arg_count) {
+    if (arg_count != function->m_arity) {
+        runtime_error("Expected %zd arguments but got %zd.", function->m_arity, arg_count);
+        return false;
+    }
+
+    if (m_call_stack.size() >= k_max_call_frames) {
+        runtime_error("Call stack overflow.");
+        return false;
+    }
+
+    // Push a new call frame onto the stack.
+    // The base index for the new frame includes all the arguments, plus
+    // the function Value that was being called (which is pushed before all arguments).
+    std::size_t value_stack_base_index = m_stack.size() - arg_count - 1;
+    m_call_stack.emplace_back(function, value_stack_base_index);
+    return true;
+}
+
 InterpretResult VM::run() {
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -77,7 +144,7 @@ InterpretResult VM::run() {
             printf(" ]");
         }
         printf("\n");
-        m_chunk->disassemble_instruction((m_ip - m_chunk->get_code().data()));
+        current_frame().disassemble_instruction();
 #endif
         uint8_t instruction = read_byte();
 
@@ -96,7 +163,7 @@ InterpretResult VM::run() {
                 // Push copy of the local to the top of the stack where
                 // other instructions will be able to find it.
                 // We're not a register based VM, so we must use the stack.
-                push(m_stack[slot]);
+                push(m_stack[current_frame().m_value_stack_base_index + slot]);
                 break;
             }
             case std::to_underlying(OpCode::SET_LOCAL): {
@@ -104,7 +171,7 @@ InterpretResult VM::run() {
                 // Store the top of the stack back into the local.
                 // Since an assignment is an expression, we leave the
                 // resulting value on the top of the stack.
-                m_stack[slot] = peek(0);
+                m_stack[current_frame().m_value_stack_base_index + slot] = peek(0);
                 break;
             }
             case std::to_underlying(OpCode::GET_GLOBAL): {
@@ -225,22 +292,66 @@ InterpretResult VM::run() {
             }
             case std::to_underlying(OpCode::JUMP): {
                 std::uint16_t offset = read_short();
-                m_ip += offset;
+                current_frame().m_ip += offset;
                 break;
             }
             case std::to_underlying(OpCode::JUMP_IF_FALSE): {
                 std::uint16_t offset = read_short();
-                if (peek(0).is_falsey()) m_ip += offset;
+                if (peek(0).is_falsey()) current_frame().m_ip += offset;
                 break;
             }
             case std::to_underlying(OpCode::LOOP): {
                 std::uint16_t offset = read_short();
-                m_ip -= offset;
+                current_frame().m_ip -= offset;
+                break;
+            }
+            case std::to_underlying(OpCode::CALL): {
+                std::uint8_t arg_count = read_byte();
+                if (!call_value(peek(arg_count), arg_count)) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                // NOTE! If we were caching call frames some how instead
+                //       of going through the m_call_stack vector,
+                //       we would need to update that here.
                 break;
             }
             case std::to_underlying(OpCode::RETURN): {
-                // Exit interpreter
-                return InterpretResult::OK;
+                // Pop the function return result from the stack.
+                Value result = pop();
+
+                // If this is the initial call frame...
+                if (m_call_stack.size() == 1) {
+                    // Clean up final frame
+                    m_call_stack.pop_back();
+
+                    // If there's more than one thing left on the value stack,
+                    // something is very wrong.
+                    if (m_stack.size() != 1) {
+                        printf("Unexpected value stack size on program termination: %zd\n", m_stack.size());
+                        reset_stack();
+                        return InterpretResult::RUNTIME_ERROR;
+                    }
+
+                    // Pop the initial function from the value stack
+                    pop();
+
+                    // Call and value stacks should now be empty, and we're done.
+                    return InterpretResult::OK;
+                }
+
+                // Clean up the value stack.
+                // We need to erase all elements of the topmost callframe upwards.
+                m_stack.erase(m_stack.begin() + current_frame().m_value_stack_base_index, m_stack.end());
+                // Clean up call stack
+                m_call_stack.pop_back();
+
+                // Push function return result back on the value stack for the caller to find.
+                push(result);
+
+                // NOTE! If we were caching call frames some how instead
+                //       of going through the m_call_stack vector,
+                //       we would need to update that here.
+                break;
             }
             default:
                 printf("Instruction not recognized: %d\n", instruction);

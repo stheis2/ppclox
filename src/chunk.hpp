@@ -28,6 +28,7 @@ enum class OpCode : std::uint8_t {
     JUMP,
     JUMP_IF_FALSE,
     LOOP,
+    CALL,
     RETURN
 };
 

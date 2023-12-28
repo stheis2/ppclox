@@ -10,6 +10,8 @@
 #include "common.hpp"
 
 enum class ObjType {
+    FUNCTION,
+    NATIVE,
     STRING
 };
 

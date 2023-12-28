@@ -6,14 +6,13 @@
 std::unique_ptr<Scanner> Compiler::s_scanner{};
 std::unique_ptr<Parser> Compiler::s_parser{};
 std::vector<Compiler> Compiler::s_compilers{};
-std::shared_ptr<Chunk> Compiler::s_current_chunk{};
 
 // NOTE! Unfortunately C++ doesn't support array initialization
 //       with enum indices, so we must resort to comments.
 //       Make sure any changes to the TokenType enum get reflected here!
 // TODO: Maybe switch to a map and generate the array at compilation start.
 ParseRule Compiler::s_rules[] = {
-    {grouping,    nullptr,   Precedence::NONE},         // [TokenType::LEFT_PAREN]
+    {grouping,    call,      Precedence::CALL},         // [TokenType::LEFT_PAREN]
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::RIGHT_PAREN]
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::LEFT_BRACE]     
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::RIGHT_BRACE]   
@@ -55,31 +54,49 @@ ParseRule Compiler::s_rules[] = {
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::END_OF_FILE]   
 };
 
-bool Compiler::compile(const char* source, const std::shared_ptr<Chunk>& chunk) {
+ObjFunction* Compiler::compile(const char* source) {
     // Create a scanner and parser we can use for this source
     s_scanner = std::make_unique<Scanner>(source);
     s_parser = std::make_unique<Parser>();
 
     // Create our initial compiler on the compiler stack
-    s_compilers.emplace_back();
-
-    // Store our chunk while we operate on it
-    s_current_chunk = chunk;
+    s_compilers.emplace_back(FunctionType::SCRIPT);
 
     advance();
     while (!match(TokenType::END_OF_FILE)) {
         declaration();
     }
-    end_compiler();
+    ObjFunction* function = end_compiler();
     bool had_error = s_parser->had_error;
 
     // Now that we are done compiling, destroy the scanner and parser,
     // and release our reference to the chunk
     s_scanner = nullptr;
     s_parser = nullptr;
-    s_current_chunk = nullptr;
 
-    return !had_error;
+    return had_error ? nullptr : function;
+}
+
+Compiler::Compiler(FunctionType function_type) : 
+    m_function_type(function_type) {
+    // Make a new chunk and function to compile into
+    std::shared_ptr<Chunk> chunk = std::make_shared<Chunk>();
+
+    // When compiling a function declaration, we call Compiler() ctor right 
+    // after we parse the function’s name. That means we can grab the name 
+    // right then from the previous token.
+    ObjString* name = nullptr;
+    if (function_type != FunctionType::SCRIPT) {
+        name = ObjString::copy_string(s_parser->previous.start, s_parser->previous.length);
+    }
+
+    m_function = new ObjFunction(chunk, name);
+
+    // From now on, the compiler implicitly claims stack slot zero
+    // for the VM's own internal use. It does this in form of a dummy local.
+    // We give it an empty name so that the user can’t write an identifier that refers to it.
+    // For the time being, this stack slot is used by the function being called.
+    m_locals.emplace_back();
 }
 
 void Compiler::error_at(const Token& token, const char* message) {
@@ -171,7 +188,7 @@ bool Compiler::match(TokenType type) {
 }
 
 void Compiler::emit_byte(std::uint8_t byte) {
-    current_chunk()->write(byte, s_parser->previous.line);
+    current_chunk().write(byte, s_parser->previous.line);
 }
 
 void Compiler::emit_opcode(OpCode op_code) {
@@ -188,14 +205,14 @@ std::size_t Compiler::emit_jump(OpCode instruction) {
     // Emit two bytes that will be filled in later
     emit_byte(0xff);
     emit_byte(0xff);
-    return current_chunk()->get_code().size() - 2;
+    return current_chunk().get_code().size() - 2;
 }
 
 void Compiler::patch_jump(std::size_t offset) {
     // -2 to adjust for the bytecode for the jump offset itself.
     // The given offset is to the jump offset, but the jump is relative to
     // AFTER the jump offset.
-    std::size_t jump = current_chunk()->get_code().size() - offset - 2;
+    std::size_t jump = current_chunk().get_code().size() - offset - 2;
 
     if (jump > std::numeric_limits<std::uint16_t>::max()) {
         error("Too much code to jump over.");
@@ -204,8 +221,8 @@ void Compiler::patch_jump(std::size_t offset) {
     std::uint8_t ho_byte = static_cast<std::uint8_t>((jump >> 8) & 0xff);
     std::uint8_t lo_byte = static_cast<std::uint8_t>(jump & 0xff);
 
-    current_chunk()->patch_at(offset, ho_byte);
-    current_chunk()->patch_at(offset + 1, lo_byte);
+    current_chunk().patch_at(offset, ho_byte);
+    current_chunk().patch_at(offset + 1, lo_byte);
 }
 
 void Compiler::emit_loop(std::size_t loop_start) {
@@ -213,7 +230,7 @@ void Compiler::emit_loop(std::size_t loop_start) {
 
     // +2 is to take into account the size of the OpCode::LOOP operands
     // which we also need to jump over.
-    std::size_t offset = current_chunk()->get_code().size() - loop_start + 2;
+    std::size_t offset = current_chunk().get_code().size() - loop_start + 2;
     if (offset > std::numeric_limits<std::uint16_t>::max()) {
         error("Loop body too large.");
     }
@@ -225,12 +242,14 @@ void Compiler::emit_loop(std::size_t loop_start) {
     emit_byte(lo_byte);
 }
 
-void Compiler::emit_return() {
-    return emit_opcode(OpCode::RETURN);
+void Compiler::emit_nil_return() {
+    /** If a function does not explicitly return, it returns nil */
+    emit_opcode(OpCode::NIL);
+    emit_opcode(OpCode::RETURN);
 }
 
 std::uint8_t Compiler::make_constant(Value value) {
-    std::size_t index = current_chunk()->add_constant(value);
+    std::size_t index = current_chunk().add_constant(value);
     if (index > std::numeric_limits<std::uint8_t>::max()) {
         // NOTE! If this were a full-sized language implementation, we’d want to add another 
         //       instruction like OP_CONSTANT_16 that stores the index as a two-byte operand 
@@ -279,13 +298,19 @@ void Compiler::add_local(Token name) {
 }
 
 
-void Compiler::end_compiler() {
-    emit_return();
+ObjFunction* Compiler::end_compiler() {
+    emit_nil_return();
+    ObjFunction* function = current().m_function;
+
 #ifdef DEBUG_PRINT_CODE
     if (!s_parser->had_error) {
-        current_chunk()->dissassemble("code");
+        current_chunk().dissassemble(function->name());
     }
-#endif    
+#endif
+
+    // Pop the compiler that compiled this function from the stack
+    s_compilers.pop_back();
+    return function;
 }
 
 void Compiler::begin_scope() {
@@ -369,6 +394,9 @@ void Compiler::define_variable(std::uint8_t global) {
 }
 
 void Compiler::mark_initialized() {
+    // This may be called when compiling functions declared at the top level,
+    // so bail early in that case.
+    if (current().scope_depth == 0) return;
     current().m_locals.at(current().m_locals.size() - 1).depth = current().scope_depth;
 }
 
@@ -425,6 +453,26 @@ void Compiler::binary(bool can_assign) {
             error("Unhandled operator type after compiling binary expressions.");
             return;
     }
+}
+
+void Compiler::call(bool can_assign) {
+    std::uint8_t arg_count = argument_list();
+    emit_opcode_arg(OpCode::CALL, arg_count);
+}
+
+std::uint8_t Compiler::argument_list() {
+    std::uint8_t arg_count = 0;
+    if (!check(TokenType::RIGHT_PAREN)) {
+        do {
+            expression();
+            if (arg_count == std::numeric_limits<std::uint8_t>::max()) {
+                error("Can't have more than 255 arguments");
+            }
+            arg_count++;
+        } while (match(TokenType::COMMA));
+    }
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments.");
+    return arg_count;
 }
 
 void Compiler::literal(bool can_assign) {
@@ -515,7 +563,9 @@ void Compiler::expression() {
 }
 
 void Compiler::declaration() {
-    if (match(TokenType::VAR)) {
+    if (match(TokenType::FUN)) {
+        fun_declaration();
+    } else if (match(TokenType::VAR)) {
         var_declaration();
     } else {
         statement();
@@ -531,6 +581,8 @@ void Compiler::statement() {
         for_statement();
     } else if (match(TokenType::IF)) {
         if_statement();
+    } else if (match(TokenType::RETURN)) {
+        return_statement();
     } else if (match(TokenType::WHILE)) {
         while_statement();
     } else if (match(TokenType::LEFT_BRACE)) {
@@ -541,6 +593,44 @@ void Compiler::statement() {
     else {
         expression_statement();
     }
+}
+
+void Compiler::fun_declaration() {
+    std::uint8_t global = parse_variable("Expect function name.");
+    // It’s safe for a function to refer to its own name inside its body. 
+    // You can’t call the function and execute the body until after it’s fully defined, 
+    // so you’ll never see the variable in an uninitialized state.
+    mark_initialized();
+    function(FunctionType::FUNCTION);
+    define_variable(global);
+}
+
+void Compiler::function(FunctionType type) {
+    // When we start compiling a function, we need
+    // to instantiate a new compiler on the stack.
+    s_compilers.emplace_back(type);
+    begin_scope();
+
+    consume(TokenType::LEFT_PAREN, "Expect '(' after function name.");
+    if (!check(TokenType::RIGHT_PAREN)) {
+        do {
+            current().m_function->m_arity++;
+            if (current().m_function->m_arity > std::numeric_limits<std::uint8_t>::max()) {
+                error_at_current("Can't have more than 255 parameters.");
+            }
+            std::uint8_t constant = parse_variable("Expect parameter name.");
+            define_variable(constant);
+        } while (match(TokenType::COMMA));
+    }
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after parameters.");
+    consume(TokenType::LEFT_BRACE, "Expect '{' before function body.");
+    block();
+
+    // This beginScope() doesn’t have a corresponding endScope() call. 
+    // Because we end Compiler completely when we reach the end of the function body, 
+    // there’s no need to close the lingering outermost scope.
+    ObjFunction* function = end_compiler();
+    emit_opcode_arg(OpCode::CONSTANT, make_constant(function));
 }
 
 void Compiler::var_declaration() {
@@ -572,7 +662,7 @@ void Compiler::for_statement() {
         expression_statement();
     }
 
-    std::size_t loop_start = current_chunk()->get_code().size();
+    std::size_t loop_start = current_chunk().get_code().size();
     std::optional<std::size_t> exit_jump = std::nullopt;
     if (!match(TokenType::SEMICOLON)) {
         expression();
@@ -585,7 +675,7 @@ void Compiler::for_statement() {
 
     if (!match(TokenType::RIGHT_PAREN)) {
         std::size_t body_jump = emit_jump(OpCode::JUMP);
-        std::size_t increment_start = current_chunk()->get_code().size();
+        std::size_t increment_start = current_chunk().get_code().size();
         expression();
         emit_opcode(OpCode::POP);
         consume(TokenType::RIGHT_PAREN, "Expect ')' after for clauses.");
@@ -623,8 +713,22 @@ void Compiler::if_statement() {
     patch_jump(else_jump);
 }
 
+void Compiler::return_statement() {
+    if (current().m_function_type == FunctionType::SCRIPT) {
+        error("Can't return from top-level code.");
+    }
+
+    if (match(TokenType::SEMICOLON)) {
+        emit_nil_return();
+    } else {
+        expression();
+        consume(TokenType::SEMICOLON, "Expect ';' after return value.");
+        emit_opcode(OpCode::RETURN);
+    }
+}
+
 void Compiler::while_statement() {
-    std::size_t loop_start = current_chunk()->get_code().size();
+    std::size_t loop_start = current_chunk().get_code().size();
     consume(TokenType::LEFT_PAREN, "Expect '(' after 'while'.");
     expression();
     consume(TokenType::RIGHT_PAREN, "Expect ')' after condition,");

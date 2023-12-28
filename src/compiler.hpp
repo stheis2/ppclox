@@ -48,9 +48,22 @@ public:
 
 class Compiler {
 public:
-    static bool compile(const char* source, const std::shared_ptr<Chunk>& chunk);
+    static ObjFunction* compile(const char* source);
+
+    Compiler(FunctionType function_type);
 
 private:
+    /** 
+     * @todo Can we do this safer than just a raw pointer? Maybe not. The compiler constructs the
+     *       function object, but when its done compiling it returns it to the caller.
+     *       So the compiler doesn't "own" the function in any way. It will be cleaned up
+     *       by the GC later. That said, we might be able to treat functions specially
+     *       and manage them outside the GC. Since they are created at compile time,
+     *       it seems like they don't necessarily need to be managed at runtime the same 
+     *       way as objects created at runtime.
+     */
+    ObjFunction* m_function;
+    FunctionType m_function_type;
     /** Locals are indexed by std::uint8_t at runtime, so thats the max we can currently support */
     static constexpr std::uint32_t k_locals_max = std::numeric_limits<std::uint8_t>::max() + 1;
     std::vector<Local> m_locals{};
@@ -65,16 +78,13 @@ private:
     static std::vector<Compiler> s_compilers;
     static Compiler& current() { return s_compilers.at(s_compilers.size() - 1); }
 
-    /** For now, the current chunk will just be a static member. Later on this will change */
-    static std::shared_ptr<Chunk> s_current_chunk;
-
     static ParseRule s_rules[];
     static ParseRule& get_rule(TokenType type) { return s_rules[std::to_underlying(type)]; }
 
     /** 
-     * Gets a pointer to the current chunk.
+     * Gets a reference to the current chunk.
     */
-    static std::shared_ptr<Chunk> current_chunk() { return s_current_chunk; }
+    static Chunk& current_chunk() { return current().m_function->chunk(); }
 
     static void error_at(const Token& token, const char* message);
     static void error_at_current(const char* message);
@@ -93,7 +103,7 @@ private:
     static std::size_t emit_jump(OpCode instruction);
     static void patch_jump(std::size_t offset);
     static void emit_loop(std::size_t loop_start);
-    static void emit_return();
+    static void emit_nil_return();
     /** Add constant to the current chunk and return its index */
     static std::uint8_t make_constant(Value value);
     static std::uint8_t identifier_constant(const Token& name);
@@ -101,7 +111,7 @@ private:
     /** Return index of local in given compiler's locals as output parameter. Boolean return indicates found or not found. */
     static bool resolve_local(const Compiler& compiler, const Token& name, std::size_t& out_index);
     static void add_local(Token name);
-    static void end_compiler();
+    static ObjFunction* end_compiler();
 
     static void begin_scope();
     static void end_scope();
@@ -114,6 +124,8 @@ private:
     static void and_(bool can_assign);
     static void or_(bool can_assign);
     static void binary(bool can_assign);
+    static void call(bool can_assign);
+    static std::uint8_t argument_list();
     static void literal(bool can_assign);
     static void grouping(bool can_assign);
     static void number(bool can_assign);
@@ -124,10 +136,13 @@ private:
     static void expression();
     static void declaration();
     static void statement();
+    static void fun_declaration();
+    static void function(FunctionType type);
     static void var_declaration();
     static void print_statement();
     static void for_statement();
     static void if_statement();
+    static void return_statement();
     static void while_statement();
     static void block();
     static void expression_statement();

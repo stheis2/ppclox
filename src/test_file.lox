@@ -1,2 +1,11 @@
-var my_str = "this is a string";
-print my_str;
+fun fib(n) {
+  if (n < 2) return n;
+  return fib(n - 2) + fib(n - 1);
+}
+
+var start = clock();
+for (var i = 0; i < 30; i = i + 1) {
+  print fib(i);
+}
+
+print clock() - start;
