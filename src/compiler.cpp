@@ -268,7 +268,7 @@ void Compiler::emit_constant(Value value) {
     emit_opcode_arg(OpCode::CONSTANT, make_constant(value));
 }
 
-bool Compiler::resolve_local(const Compiler& compiler, const Token& name, std::size_t& out_index) {
+bool Compiler::resolve_local(const Compiler& compiler, const Token& name, std::uint8_t& out_index) {
     // Iterate backwards and find the index of the local.
     // Use it = index + 1 to avoid underflow.
     for (std::size_t it = compiler.m_locals.size(); it > 0; --it) {
@@ -277,13 +277,68 @@ bool Compiler::resolve_local(const Compiler& compiler, const Token& name, std::s
         if (name.as_string_view() == local.name.as_string_view()) {
             if (local.depth == -1) {
                 error("Can't read local variable in its own initializer");
+                return false;
             }
-            out_index = index;
+            // This should never happen, but verify here.
+            if (index >= std::numeric_limits<std::uint8_t>::max()) {
+                error("Too many local variables in function resolve_local.");
+                return false;
+            }
+            out_index = static_cast<std::uint8_t>(index);
             return true;
         }
     }
 
     return false;
+}
+
+bool Compiler::resolve_upvalue(const CompilerRevIterator compiler_rev_iter, const Token& name, std::uint8_t& out_index) {
+    CompilerRevIterator enclosing = compiler_rev_iter + 1;
+
+    // if there is no enclosing compiler, we've reached the global scope so there is nothing to capture.
+    // We don't capture globals we only capture locals.
+    if (enclosing == compilers_rend()) return false;
+
+    std::uint8_t local_index{};
+    if (resolve_local(*enclosing, name, local_index)) {
+        // Add the upvalue
+        out_index = add_upvalue(*compiler_rev_iter, local_index, true);
+        return true;
+    }
+
+    return false;
+}
+
+std::uint8_t Compiler::add_upvalue(Compiler& compiler, std::uint8_t index, bool is_local) {
+    auto error_msg = "Too many closure variables in function";
+    
+    // See if there is an existing upvalue to return
+    for (std::size_t i = 0, len = compiler.m_upvalues.size(); i < len; ++i) {
+        Upvalue& upvalue = compiler.m_upvalues.at(i);
+        if (upvalue.index == index && upvalue.is_local == is_local) {
+            return verify_index(i, error_msg);
+        }
+    }
+
+    // Otherwise, we must add an upvalue
+    if (compiler.m_upvalues.size() >= k_upvalues_max) {
+        error(error_msg);
+        return 0;
+    }
+    compiler.m_upvalues.emplace_back(Upvalue {
+        .index = index,
+        .is_local = is_local
+    });
+    std::size_t insert_index = compiler.m_upvalues.size() - 1;
+    return verify_index(insert_index, error_msg);
+}
+
+std::uint8_t Compiler::verify_index(std::size_t index, const char* message) {
+    if (index > std::numeric_limits<std::uint8_t>::max()) {
+        error(message);
+        return 0;
+    }
+    return static_cast<std::uint8_t>(index);
 }
 
 void Compiler::add_local(Token name) {
@@ -511,17 +566,16 @@ void Compiler::named_variable(const Token& name, bool can_assign) {
     OpCode set_op{};
     std::uint8_t arg{};
 
-    std::size_t local_index{};
+    std::uint8_t local_index{};
+    std::uint8_t upvalue_index{};
     if (resolve_local(current(), name, local_index)) {
         get_op = OpCode::GET_LOCAL;
         set_op = OpCode::SET_LOCAL;
-
-        // This should never happend, but verify here
-        if (local_index >= std::numeric_limits<std::uint8_t>::max()) {
-            error("Too many local variables in function in named_variable.");
-            return;
-        }
-        arg = static_cast<std::uint8_t>(local_index);
+        arg = local_index;
+    } else if (resolve_upvalue(compilers_rbegin(), name, upvalue_index)) {
+        get_op = OpCode::GET_UPVALUE;
+        set_op = OpCode::SET_UPVALUE;
+        arg = upvalue_index;
     } else {
         get_op = OpCode::GET_GLOBAL;
         set_op = OpCode::SET_GLOBAL;

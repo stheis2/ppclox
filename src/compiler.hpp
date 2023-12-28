@@ -46,6 +46,12 @@ public:
     int depth{};
 };
 
+class Upvalue {
+public:
+    std::uint8_t index{};
+    bool is_local{};
+};
+
 class Compiler {
 public:
     static ObjFunction* compile(const char* source);
@@ -65,8 +71,11 @@ private:
     ObjFunction* m_function;
     FunctionType m_function_type;
     /** Locals are indexed by std::uint8_t at runtime, so thats the max we can currently support */
-    static constexpr std::uint32_t k_locals_max = std::numeric_limits<std::uint8_t>::max() + 1;
+    static constexpr std::size_t k_locals_max = std::numeric_limits<std::uint8_t>::max() + 1;
     std::vector<Local> m_locals{};
+    /** Upvalues are indexed by std::uint8_t at runtime, so thats the max we can currently support */
+    static constexpr std::size_t k_upvalues_max = std::numeric_limits<std::uint8_t>::max() + 1;
+    std::vector<Upvalue> m_upvalues{};
     int scope_depth{};
 
     /** During compilation, these will contain the scanner and parser for the current source */
@@ -76,7 +85,10 @@ private:
 
     /** During compilation, we maintain a stack of compilers. */
     static std::vector<Compiler> s_compilers;
+    typedef std::vector<Compiler>::reverse_iterator CompilerRevIterator;
     static Compiler& current() { return s_compilers.at(s_compilers.size() - 1); }
+    static CompilerRevIterator compilers_rbegin() { return s_compilers.rbegin(); }
+    static CompilerRevIterator compilers_rend() { return s_compilers.rend(); }
 
     static ParseRule s_rules[];
     static ParseRule& get_rule(TokenType type) { return s_rules[std::to_underlying(type)]; }
@@ -109,7 +121,12 @@ private:
     static std::uint8_t identifier_constant(const Token& name);
     static void emit_constant(Value value);
     /** Return index of local in given compiler's locals as output parameter. Boolean return indicates found or not found. */
-    static bool resolve_local(const Compiler& compiler, const Token& name, std::size_t& out_index);
+    static bool resolve_local(const Compiler& compiler, const Token& name, std::uint8_t& out_index);
+    /** Return index of upvalue in given compiler's upvalues as output parameter. Boolean return indicates found or not found. */
+    static bool resolve_upvalue(const CompilerRevIterator compiler_rev_iter, const Token&name, std::uint8_t& out_index);
+    /** Add upvalue to the given compiler's upvalues array with the given index. Returns index at which it was added. */
+    static std::uint8_t add_upvalue(Compiler& compiler, std::uint8_t index, bool is_local);
+    static std::uint8_t verify_index(std::size_t index, const char* message);
     static void add_local(Token name);
     static ObjFunction* end_compiler();
 
