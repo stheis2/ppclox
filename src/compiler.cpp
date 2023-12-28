@@ -62,11 +62,6 @@ ObjFunction* Compiler::compile(const char* source) {
     // Create our initial compiler on the compiler stack
     s_compilers.emplace_back(FunctionType::SCRIPT);
 
-    // From now on, the compiler implicitly claims stack slot zero
-    // for the VM's own internal use. It does this in form of a dummy local.
-    Token dummy{};
-    current().add_local(dummy);
-
     advance();
     while (!match(TokenType::END_OF_FILE)) {
         declaration();
@@ -96,6 +91,12 @@ Compiler::Compiler(FunctionType function_type) :
     }
 
     m_function = new ObjFunction(chunk, name);
+
+    // From now on, the compiler implicitly claims stack slot zero
+    // for the VM's own internal use. It does this in form of a dummy local.
+    // We give it an empty name so that the user can’t write an identifier that refers to it.
+    // For the time being, this stack slot is used by the function being called.
+    m_locals.emplace_back();
 }
 
 void Compiler::error_at(const Token& token, const char* message) {
