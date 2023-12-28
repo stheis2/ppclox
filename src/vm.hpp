@@ -10,27 +10,29 @@
 
 class CallFrame {
 public:
-    ObjFunction* m_function{};
+    ObjClosure* m_closure{};
     /** If non-null, this is a pointer into the chunk's code */
     /** @todo Is there any way to make this safer? Maybe using an iterator? */
     const std::uint8_t* m_ip{};
     /** Base index into the VM's value stack for this call frame's locals etc. */
     std::size_t m_value_stack_base_index{};
 
-    CallFrame(ObjFunction* function, std::size_t value_stack_base_index) : 
-        m_function(function), m_ip(function->chunk().get_code().data()), m_value_stack_base_index(value_stack_base_index) {}
+    CallFrame(ObjClosure* closure, std::size_t value_stack_base_index) : 
+        m_closure(closure), 
+        m_ip(closure->function()->chunk().get_code().data()), 
+        m_value_stack_base_index(value_stack_base_index) {}
 
     std::size_t next_instruction_offset() {
-        return m_ip - m_function->chunk().get_code().data();
+        return m_ip - m_closure->function()->chunk().get_code().data();
     }
 
     /** Offset of currently executing instruction. Assumes at least 1 instruction has been read. */
     std::size_t current_instruction_offset() {
-        return m_ip - m_function->chunk().get_code().data() - 1;
+        return m_ip - m_closure->function()->chunk().get_code().data() - 1;
     }
 
     void disassemble_instruction() {
-        m_function->chunk().disassemble_instruction(next_instruction_offset());
+        m_closure->function()->chunk().disassemble_instruction(next_instruction_offset());
     }
 };
 
@@ -64,7 +66,7 @@ private:
     Value pop();
     Value peek(std::size_t distance);
     bool call_value(Value callee, std::size_t arg_count);
-    bool call(ObjFunction* function, std::size_t arg_count);
+    bool call(ObjClosure* closure, std::size_t arg_count);
 
     InterpretResult run();
 
@@ -89,7 +91,7 @@ private:
      * NOTE! We do not do any bounds checking here to ensure fast execution, so it's 
      * important that the compiled code produce correct, in-bound indexes.
      */
-    Value read_constant() { return current_frame().m_function->chunk().get_constants()[this->read_byte()]; }
+    Value read_constant() { return current_frame().m_closure->function()->chunk().get_constants()[this->read_byte()]; }
     ObjString* read_string() { return read_constant().as_string(); }
     bool verify_binary_op_types();
 };

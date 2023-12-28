@@ -6,6 +6,7 @@
 
 // We need to forward declare this due to circular dependencies
 class ObjFunction;
+class ObjClosure;
 class ObjNative;
 
 enum class ValueType {
@@ -40,9 +41,11 @@ public:
     ObjType obj_type() const { return as_obj()->type(); }
     bool is_obj_type(ObjType type) const { return is_obj() && as_obj()->type() == type; }
     bool is_string() const { return is_obj_type(ObjType::STRING); }
+    bool is_closure() const { return is_obj_type(ObjType::CLOSURE); }
     bool is_function() const { return is_obj_type(ObjType::FUNCTION); }
     bool is_native() const { return is_obj_type(ObjType::NATIVE); }
 
+    ObjClosure* as_closure() const { return (ObjClosure*)as_obj(); }
     ObjFunction* as_function() const { return (ObjFunction*)as_obj(); }
     ObjNative* as_native() const { return (ObjNative*)as_obj(); }
     ObjString* as_string() const { return (ObjString*)as_obj(); }

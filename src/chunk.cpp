@@ -81,6 +81,8 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
             return jump_instruction("OP_LOOP", false, *this, offset);
         case std::to_underlying(OpCode::CALL):
             return byte_instruction("OP_CALL", *this, offset);
+        case std::to_underlying(OpCode::CLOSURE):
+            return closure_instruction("OP_CLOSURE", *this, offset);
         case std::to_underlying(OpCode::RETURN):
             return simple_instruction("OP_RETURN", offset);
         default:
@@ -120,4 +122,13 @@ std::size_t Chunk::constant_instruction(const char* name, const Chunk& chunk, st
     chunk.get_constants().at(constant).print();
     printf("'\n");
     return offset + 2;
+}
+
+std::size_t Chunk::closure_instruction(const char* name, const Chunk& chunk, std::size_t offset) {
+    offset++;
+    std::uint8_t constant = chunk.get_code().at(offset++);
+    printf("%-16s %4d ", name, constant);
+    chunk.get_constants().at(constant).print();
+    printf("\n");
+    return offset;
 }

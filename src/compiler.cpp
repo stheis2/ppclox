@@ -630,7 +630,9 @@ void Compiler::function(FunctionType type) {
     // Because we end Compiler completely when we reach the end of the function body, 
     // there’s no need to close the lingering outermost scope.
     ObjFunction* function = end_compiler();
-    emit_opcode_arg(OpCode::CONSTANT, make_constant(function));
+    // At runtime, create a closure wrapping the function and push it on 
+    // the stack to be called
+    emit_opcode_arg(OpCode::CLOSURE, make_constant(function));
 }
 
 void Compiler::var_declaration() {

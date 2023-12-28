@@ -38,6 +38,15 @@ private:
     ObjString* m_name{};
 };
 
+class ObjClosure : public Obj {
+public:
+    ObjClosure(ObjFunction* function) : Obj(ObjType::CLOSURE), m_function(function) {}
+    void print() const override { m_function->print(); }
+    ObjFunction* function() { return m_function; }
+private:
+    ObjFunction* m_function{};
+};
+
 typedef std::vector<Value>::iterator NativeFnArgsIterator;
 typedef Value (*NativeFn)(std::size_t arg_count, NativeFnArgsIterator args_start, NativeFnArgsIterator args_end);
 

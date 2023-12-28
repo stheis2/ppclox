@@ -29,9 +29,13 @@ InterpretResult VM::interpret(const char* source) {
     ObjFunction* function = Compiler::compile(source);
     if (function == nullptr) return InterpretResult::COMPILE_ERROR;
 
-    // Set up our initial call frame
+    // Set up our initial call frame.
+    // We push the function so it doesn't get GC'd when we create the closure
     push(function);
-    call(function, 0);
+    ObjClosure* closure = new ObjClosure(function);
+    pop();
+    push(closure);
+    call(closure, 0);
 
     return run();
 }
@@ -51,8 +55,8 @@ void VM::runtime_error(const char* format, ...) {
     for (auto frame_it = m_call_stack.rbegin(); frame_it != m_call_stack.rend(); ++frame_it) {
         // Get the instruction that was in the process of being executed
         size_t instruction = frame_it->current_instruction_offset();
-        std::size_t line = frame_it->m_function->chunk().get_lines().at(instruction);
-        fprintf(stderr, "[line %zd] in %s()\n", line, frame_it->m_function->name());
+        std::size_t line = frame_it->m_closure->function()->chunk().get_lines().at(instruction);
+        fprintf(stderr, "[line %zd] in %s()\n", line, frame_it->m_closure->function()->name());
     }
     
     reset_stack();
@@ -96,8 +100,8 @@ Value VM::peek(std::size_t distance) {
 bool VM::call_value(Value callee, std::size_t arg_count) {
     if (callee.is_obj()) {
         switch (callee.obj_type()) {
-            case ObjType::FUNCTION:
-                return call(callee.as_function(), arg_count);
+            case ObjType::CLOSURE:
+                return call(callee.as_closure(), arg_count);
             case ObjType::NATIVE: {
                 NativeFn native = callee.as_native()->function();
                 Value result = native(arg_count, m_stack.end() - arg_count, m_stack.end());
@@ -116,9 +120,9 @@ bool VM::call_value(Value callee, std::size_t arg_count) {
     return false;
 }
 
-bool VM::call(ObjFunction* function, std::size_t arg_count) {
-    if (arg_count != function->m_arity) {
-        runtime_error("Expected %zd arguments but got %zd.", function->m_arity, arg_count);
+bool VM::call(ObjClosure* closure, std::size_t arg_count) {
+    if (arg_count != closure->function()->m_arity) {
+        runtime_error("Expected %zd arguments but got %zd.", closure->function()->m_arity, arg_count);
         return false;
     }
 
@@ -131,7 +135,7 @@ bool VM::call(ObjFunction* function, std::size_t arg_count) {
     // The base index for the new frame includes all the arguments, plus
     // the function Value that was being called (which is pushed before all arguments).
     std::size_t value_stack_base_index = m_stack.size() - arg_count - 1;
-    m_call_stack.emplace_back(function, value_stack_base_index);
+    m_call_stack.emplace_back(closure, value_stack_base_index);
     return true;
 }
 
@@ -313,6 +317,12 @@ InterpretResult VM::run() {
                 // NOTE! If we were caching call frames some how instead
                 //       of going through the m_call_stack vector,
                 //       we would need to update that here.
+                break;
+            }
+            case std::to_underlying(OpCode::CLOSURE): {
+                ObjFunction* function = read_constant().as_function();
+                ObjClosure* closure = new ObjClosure(function);
+                push(closure);
                 break;
             }
             case std::to_underlying(OpCode::RETURN): {
