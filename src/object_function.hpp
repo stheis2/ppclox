@@ -2,11 +2,13 @@
 #define ppclox_object_function_hpp
 
 #include <memory>
+#include <optional>
 
 #include "object.hpp"
 #include "object_string.hpp"
 
-// We need to forward declare this due to circular dependencies
+// We forward declare these instead of including their headers to avoid circular
+// dependencies.
 class Chunk;
 class Value;
 
@@ -38,6 +40,15 @@ private:
     /** @todo Can we make this safer than a raw pointer somehow? */
     ObjString* m_name{};
 };
+
+// class ObjUpvalue : public Obj {
+// public:
+//     /** Returns index into value stack if upvalue is stored there. If not, use closed_value. */
+//     std::optional<std::size_t> value_stack_index() { return m_value_stack_index; }
+// private:
+//     std::optional<std::size_t> m_value_stack_index{};
+//     Value m_value{};
+// };
 
 class ObjClosure : public Obj {
 public:

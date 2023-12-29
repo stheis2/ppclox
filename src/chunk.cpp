@@ -1,5 +1,9 @@
 #include "chunk.hpp"
 
+// We need this to access function types below.
+// We don't include it in "chunk.hpp" to avoid circular dependencies.
+#include "object_function.hpp"
+
 void Chunk::write(std::uint8_t byte, std::size_t line) {
     m_code.push_back(byte);
     m_lines.push_back(line);

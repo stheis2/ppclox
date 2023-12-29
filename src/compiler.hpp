@@ -8,6 +8,7 @@
 #include "scanner.hpp"
 #include "object.hpp"
 #include "object_string.hpp"
+#include "object_function.hpp"
 
 class Parser {
 public:

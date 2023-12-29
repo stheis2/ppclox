@@ -2,9 +2,11 @@
 #define ppclox_value_hpp
 
 #include "common.hpp"
-#include "object_all_types.hpp"
+#include "object.hpp"
+#include "object_string.hpp"
 
-// We need to forward declare this due to circular dependencies
+// We forward declare these instead of including their headers to avoid circular
+// dependencies.
 class ObjFunction;
 class ObjClosure;
 class ObjNative;
