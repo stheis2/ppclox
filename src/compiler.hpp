@@ -45,6 +45,7 @@ class Local {
 public:
     Token name{};
     int depth{};
+    bool is_captured{};
 };
 
 class Upvalue {

@@ -50,6 +50,8 @@ public:
     // Lox user can directly access in a program. So this code will never actually execute
     void print() const override { printf("upvalue"); }
 
+    void close(const std::vector<Value>& stack) { m_value = stack[m_value_stack_index.value()]; m_value_stack_index = std::nullopt; }
+
     /** Returns if upvalue contains index into value stack. If not, use closed_value. */
     bool is_stack_index() { return m_value_stack_index.has_value(); }
     /** Only use if is_stack_index() reports true */

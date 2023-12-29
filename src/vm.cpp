@@ -140,8 +140,29 @@ bool VM::call(ObjClosure* closure, std::size_t arg_count) {
 }
 
 ObjUpvalue* VM::capture_upvalue(std::size_t stack_index) {
+    // If an open upvalue already exists for this stack index,
+    // just return that
+    auto it = m_open_upvalues.find(stack_index);
+    if (it != m_open_upvalues.end()) {
+        return it->second;
+    }
+
+    // Create the new open upvalue and store it for later lookup
     ObjUpvalue* created_upvalue = new ObjUpvalue(stack_index);
+    m_open_upvalues[stack_index] = created_upvalue;
     return created_upvalue;
+}
+
+void VM::close_upvalues(std::size_t start_index) {
+    // Start with an iterator for all keys >= the given key
+    // See https://en.cppreference.com/w/cpp/container/map/lower_bound
+    for (auto it = m_open_upvalues.lower_bound(start_index); it != m_open_upvalues.end(); ++it) {
+        // Close the upvalue
+        it->second->close(m_stack);
+    }
+    
+    // Now erase these values now that they are closed
+    m_open_upvalues.erase(m_open_upvalues.lower_bound(start_index), m_open_upvalues.end());
 }
 
 InterpretResult VM::run() {
@@ -365,9 +386,19 @@ InterpretResult VM::run() {
                 }
                 break;
             }
+            case std::to_underlying(OpCode::CLOSE_UPVALUE): {
+                close_upvalues(m_stack.size() - 1);
+                pop();
+                break;
+            }
             case std::to_underlying(OpCode::RETURN): {
                 // Pop the function return result from the stack.
                 Value result = pop();
+
+                // Close any open upvalues in this function's stack frame.
+                // These values are about to be popped from the stack and
+                // so need to be lifted onto the heap until they are no longer needed.
+                close_upvalues(current_frame().m_value_stack_base_index);
 
                 // If this is the initial call frame...
                 if (m_call_stack.size() == 1) {

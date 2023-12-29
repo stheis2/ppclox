@@ -303,6 +303,8 @@ bool Compiler::resolve_upvalue(const CompilerRevIterator compiler_rev_iter, cons
     // Try to find a local in the enclosing scope
     std::uint8_t local_index{};
     if (resolve_local(*enclosing, name, local_index)) {
+        // Mark the local as captured
+        enclosing->m_locals.at(local_index).is_captured = true;
         // Add the upvalue to the current compiler
         out_index = add_upvalue(*compiler_rev_iter, local_index, true);
         return true;
@@ -364,7 +366,8 @@ void Compiler::add_local(Token name) {
     }
     current().m_locals.emplace_back(Local {
         .name = name,
-        .depth = -1
+        .depth = -1,
+        .is_captured = false
     });
 }
 
@@ -398,7 +401,11 @@ void Compiler::end_scope() {
 
     // We need to pop all local variables when we leave the scope
     while (current().m_locals.size() > 0 && current().m_locals.back().depth > current().scope_depth) {
-        emit_opcode(OpCode::POP);
+        if (current().m_locals.back().is_captured) {
+            emit_opcode(OpCode::CLOSE_UPVALUE);
+        } else {
+            emit_opcode(OpCode::POP);
+        }
         current().m_locals.pop_back();
     }
 }

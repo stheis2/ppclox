@@ -2,6 +2,7 @@
 #define ppclox_vm_hpp
 
 #include <memory>
+#include <map>
 
 #include "chunk.hpp"
 #include "object_function.hpp"
@@ -58,6 +59,16 @@ private:
     std::vector<CallFrame> m_call_stack{};
     std::vector<Value> m_stack{};
     std::unordered_map<ObjStringRef, Value, ObjStringRefHash> m_globals{};
+    /** 
+     * Map from value stack index to open upvalue referring to that index
+     * NOTE! We just use the std::less<std::size_t> compareer, so keys are sorted
+     *       in ascending order. This is opposite of the linked list used by Clox.
+     * NOTE! The intrusive linked list used by Clox may very well be more efficient,
+     *       but this is obviously simpler. One might have to measure if it really matters.
+     *       We also might want to investigate if std::unordered_map would be faster for typical Lox 
+     *       workloads, or perhaps even std::vector.
+     */
+    std::map<std::size_t, ObjUpvalue*> m_open_upvalues{};
 
     void reset_stack();
     void runtime_error(const char* format, ...);
@@ -68,6 +79,8 @@ private:
     bool call_value(Value callee, std::size_t arg_count);
     bool call(ObjClosure* closure, std::size_t arg_count);
     ObjUpvalue* capture_upvalue(std::size_t stack_index);
+    // Close upvalues starting at the given index and proceeding to the top of the stack
+    void close_upvalues(std::size_t start_index);
 
     InterpretResult run();
 
