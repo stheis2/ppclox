@@ -139,6 +139,11 @@ bool VM::call(ObjClosure* closure, std::size_t arg_count) {
     return true;
 }
 
+ObjUpvalue* VM::capture_upvalue(std::size_t stack_index) {
+    ObjUpvalue* created_upvalue = new ObjUpvalue(stack_index);
+    return created_upvalue;
+}
+
 InterpretResult VM::run() {
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -206,6 +211,28 @@ InterpretResult VM::run() {
                     return InterpretResult::RUNTIME_ERROR;
                 }
                 it->second = peek(0);
+                break;
+            }
+            case std::to_underlying(OpCode::GET_UPVALUE): {
+                std::uint8_t slot = read_byte();
+                ObjUpvalue* upvalue = current_frame().m_closure->upvalues()[slot];
+                if (upvalue->is_stack_index()) {
+                    push(m_stack[upvalue->stack_index()]);
+                }
+                else {
+                    push(upvalue->closed_value());
+                }
+                break;
+            }
+            case std::to_underlying(OpCode::SET_UPVALUE): {
+                std::uint8_t slot = read_byte();
+                ObjUpvalue* upvalue = current_frame().m_closure->upvalues()[slot];
+                if (upvalue->is_stack_index()) {
+                    m_stack[upvalue->stack_index()] = peek(0);
+                }
+                else {
+                    upvalue->closed_value() = peek(0);
+                }
                 break;
             }
             case std::to_underlying(OpCode::EQUAL): {
@@ -323,6 +350,19 @@ InterpretResult VM::run() {
                 ObjFunction* function = read_constant().as_function();
                 ObjClosure* closure = new ObjClosure(function);
                 push(closure);
+
+                // Set the upvalues, skipping bounds checking since that *should*
+                // be done correctly at compile time.
+                for (std::size_t i = 0, len = closure->upvalues().size(); i < len; i++) {
+                    std::uint8_t is_local = read_byte();
+                    std::uint8_t index = read_byte();
+                    if (is_local) {
+                        closure->upvalues()[i] = capture_upvalue(current_frame().m_value_stack_base_index + index);
+                    }
+                    else {
+                        closure->upvalues()[i] = current_frame().m_closure->upvalues()[index];
+                    }
+                }
                 break;
             }
             case std::to_underlying(OpCode::RETURN): {

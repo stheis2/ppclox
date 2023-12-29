@@ -13,7 +13,8 @@ enum class ObjType {
     CLOSURE,
     FUNCTION,
     NATIVE,
-    STRING
+    STRING,
+    UPVALUE
 };
 
 class Obj {

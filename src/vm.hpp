@@ -67,6 +67,7 @@ private:
     Value peek(std::size_t distance);
     bool call_value(Value callee, std::size_t arg_count);
     bool call(ObjClosure* closure, std::size_t arg_count);
+    ObjUpvalue* capture_upvalue(std::size_t stack_index);
 
     InterpretResult run();
 
