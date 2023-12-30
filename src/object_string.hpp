@@ -88,6 +88,10 @@ private:
 
     /** Map used for de-deping ObjStrings */
     static std::unordered_map<InternedStringKey, ObjString*, InternedStringKeyHash> s_interned_strings;
+    /** 
+     * Lock used to protect operations involving s_interned_strings. Although not currently used
+     * this way, this allows this de-duping mechanism to be used in multi-threaded scenarios.
+     */
     static std::mutex s_interned_strings_mutex;
 };
 
