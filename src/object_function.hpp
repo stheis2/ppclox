@@ -35,6 +35,7 @@ public:
     std::size_t m_arity{};
     std::size_t m_upvalue_count{};
     const char* name() const { return m_name != nullptr ? m_name->chars() : "<script>"; };
+    ObjString* name_obj() { return m_name; }
 private:
     std::shared_ptr<Chunk> m_chunk{};
     /** @todo Can we make this safer than a raw pointer somehow? */

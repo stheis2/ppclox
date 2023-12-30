@@ -78,6 +78,10 @@ private:
     static std::vector<Obj*> s_gray_worklist;
 
     static void mark_gc_roots();
+    static void trace_gc_references();
+
+    /** Blacken a gray object by first graying its references, then mark it as black */
+    void blacken();
 
 //TODO: Implement custom new and delete for objs? And how do we account for the ObjStrings
 // memory?   
