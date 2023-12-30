@@ -61,6 +61,13 @@ protected:
         printf("%p object type %d\n", this, m_type);
 #endif      
     }
+
+    // Add approximate bytes allocated/owned by subclasses not directly part of the size
+    // of the subclass itself.
+    static void add_bytes_allocated(std::size_t bytes);
+    // Subtract approximate bytes allocated/owned by subclasses not directly part of the size
+    // of the subclass itself.
+    static void subtract_bytes_allocated(std::size_t bytes);
 private:
     ObjType m_type{};
     ObjGcColor m_gc_color{};
@@ -74,8 +81,20 @@ private:
      */
     static std::vector<Obj*> s_all_objects;
 
+    /**
+     * Track bytes allocated to Obj instances themselves
+     * @todo Can we use the bytes map as the master list of all objects
+     * instead of having them separate????
+    */
+    static std::unordered_map<Obj*, std::size_t> s_bytes_map;
+
     // Gray objects needing processing during garbage collection
     static std::vector<Obj*> s_gray_worklist;
+
+    static std::size_t s_bytes_allocated;
+    static constexpr std::size_t k_initial_gc_threshold = 1024 * 1024;
+    static constexpr std::size_t k_gc_heap_grow_factor = 2;
+    static std::size_t s_next_gc;
 
     static void mark_gc_roots();
     static void trace_gc_references();

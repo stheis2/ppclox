@@ -32,11 +32,23 @@ void* Obj::operator new(std::size_t size) {
     collect_garbage();
 #endif
 
+//FIX - Put practical limit on object heap size
+
+    // If the previous allocation put us over the limit, run the collector before
+    // before allocating more.
+    if (s_bytes_allocated > s_next_gc) {
+        collect_garbage();
+    }
+
     void* ptr = ::operator new(size);
 
     // Whenever we allocate an Obj, add it to the master list
     Obj* obj = static_cast<Obj*>(ptr);
     s_all_objects.push_back(obj);
+
+    // Accumulate bytes allocated and save for later
+    s_bytes_allocated += size;
+    s_bytes_map[obj] = size;
 
 #ifdef DEBUG_LOG_GC
     printf("%p allocated %zu\n", ptr, size);
@@ -46,6 +58,19 @@ void* Obj::operator new(std::size_t size) {
 }
 
 void Obj::operator delete(void *memory) {
+    // Find this object to decerement its bytes allocated and
+    // also remove it from the map.
+    auto it = s_bytes_map.find((Obj*)memory);
+    if (it != s_bytes_map.end()) {
+        s_bytes_allocated -= it->second;
+        s_bytes_map.erase(it);
+    }
+    else {
+#ifdef DEBUG_LOG_GC
+    printf("%p unable to find in bytes map for removing allocated bytes!\n", memory);
+#endif        
+    }
+
 #ifdef DEBUG_LOG_GC
     printf("%p free\n", memory);
 #endif   
@@ -63,19 +88,49 @@ void Obj::free_objects() {
 void Obj::collect_garbage() {
 #ifdef DEBUG_LOG_GC
     printf("-- gc begin\n");
+    std::size_t before = s_bytes_allocated;
 #endif
 
     mark_gc_roots();
     trace_gc_references();
+    // NOTE! We don't need to release weak references to ObjStrings
+    //       like Clox because ObjString automatically removes itself
+    //       from the de-duping table upon destruction.
     sweep();
+
+    // Now that we're done, adjust next GC threshold based
+    // on total (estimated) heap size.
+    // NOTE! In the unlikely event that the heap is so large that multiplying by the growth factor might overflow,
+    //       choose the midpoint between the heap size and the max
+    if (s_bytes_allocated < (std::numeric_limits<std::size_t>::max() / k_gc_heap_grow_factor)) {
+        s_next_gc = s_bytes_allocated * k_gc_heap_grow_factor;
+    }
+    else {
+        std::size_t increment = (std::numeric_limits<std::size_t>::max() - s_bytes_allocated) / 2;
+        s_next_gc = s_bytes_allocated + increment;
+    }
 
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
+    printf("   collected %zu bytes (from %zu to %zu) next at %zu\n",
+        before - s_bytes_allocated, before, s_bytes_allocated,
+        s_next_gc);
 #endif
 }
 
+void Obj::add_bytes_allocated(std::size_t bytes) {
+    s_bytes_allocated += bytes;
+}
+
+void Obj::subtract_bytes_allocated(std::size_t bytes) {
+    s_bytes_allocated -= bytes;
+}
+
 std::vector<Obj*> Obj::s_all_objects{};
+std::unordered_map<Obj*, std::size_t> Obj::s_bytes_map{};
 std::vector<Obj*> Obj::s_gray_worklist{};
+std::size_t Obj::s_bytes_allocated{};
+std::size_t Obj::s_next_gc = Obj::k_initial_gc_threshold;
 
 void Obj::mark_gc_roots() {
     // Tell the compiler to mark its roots

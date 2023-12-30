@@ -1,16 +1,22 @@
-fun outer() {
-  var x = "outside";
-  fun inner() {
-    print x;
-  }
-
-  return inner;
+{
+  var a = "a";
+  var b = "b";
+  var c = a + b;
+  var d = c + c;
 }
 
-var closure = outer();
-closure();
+print "done!" + "another one!";
 
-var a = "a";
-var b = "b";
-var c = a + b;
-var d = c + c;
+//fun outer() {
+  //var x = "outside";
+  //fun inner() {
+   // print x;
+  //}
+//
+ // return inner;
+//}
+
+//var closure = outer();
+//closure();
+
+

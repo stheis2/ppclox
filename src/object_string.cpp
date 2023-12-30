@@ -38,6 +38,9 @@ void ObjString::print() const {
 }
 
 ObjString::~ObjString() {
+    // Since we are about to be destroyed, inform GC about bytes being removed
+    Obj::subtract_bytes_allocated(string_bytes());
+
     // Construct the search key we will use to find ourselves in the map
     InternedStringKey search(this);
 
@@ -99,6 +102,10 @@ ObjString* ObjString::find_existing(const InternedStringKey& search) {
 }
 
 void ObjString::store_new(ObjString* str) {
+    // NOTE! Unlike in Clox, storing this string
+    //       here cannot trigger a GC since it does not
+    //       allocate any Obj's. So we have nothing to fix there.
+
     // Construct the key we will use to find ourselves in the map later
     InternedStringKey key(str);
     s_interned_strings[key] = str;

@@ -14,6 +14,9 @@ void Chunk::patch_at(std::size_t offset, std::uint8_t byte) {
 }
 
 std::size_t Chunk::add_constant(Value value) {
+    // NOTE! Unlike in Clox, this push_back will
+    //       not trigger a GC since it does not allocate
+    //       any Obj's. So we have nothing to fix here.
     m_constants.push_back(value);
     return m_constants.size() - 1;
 }

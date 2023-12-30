@@ -37,6 +37,9 @@ public:
     const char* name() const { return m_name != nullptr ? m_name->chars() : "<script>"; };
     ObjString* name_obj() { return m_name; }
 private:
+    // NOTE! Although Chunks and their constituent parts do take up memory,
+    //       we don't worry about including them in GC memory pressure analysis.
+    //       Any objects actually included in the chunk's contants will be included as expected.
     std::shared_ptr<Chunk> m_chunk{};
     /** @todo Can we make this safer than a raw pointer somehow? */
     ObjString* m_name{};
@@ -66,10 +69,19 @@ private:
 class ObjClosure : public Obj {
 public:
     // m_upvalues is initialized with function->m_upvalue_count null pointers
-    ObjClosure(ObjFunction* function) : Obj(ObjType::CLOSURE), m_function(function), m_upvalues(function->m_upvalue_count) {}
+    ObjClosure(ObjFunction* function) : Obj(ObjType::CLOSURE), m_function(function), m_upvalues(function->m_upvalue_count) {
+        // Although small, the upvalues vector itself does add some additional memory we should account for.
+        // Since we don't modify the size of the vector after construction, this *should* remain constant.
+        Obj::add_bytes_allocated(upvalues_vector_bytes());
+
+    }
+    ~ObjClosure() {
+        Obj::subtract_bytes_allocated(upvalues_vector_bytes());
+    }
     void print() const override { m_function->print(); }
     ObjFunction* function() { return m_function; }
     std::vector<ObjUpvalue*>& upvalues() { return m_upvalues; }
+    std::size_t upvalues_vector_bytes() { return m_upvalues.capacity() * sizeof(ObjUpvalue*); }
 private:
     ObjFunction* m_function{};
     std::vector<ObjUpvalue*> m_upvalues{};

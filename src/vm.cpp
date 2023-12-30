@@ -304,11 +304,17 @@ InterpretResult VM::run() {
                 break;
             }
             case std::to_underlying(OpCode::ADD): {
+                Value peek_b = peek(0);
+                Value peek_a = peek(1);
+
                 // Handle String concatenation
-                if (peek(0).is_string() && peek(1).is_string()) {
-                    Value b = pop();
-                    Value a = pop();
-                    ObjString* result = *a.as_string() + *b.as_string();
+                // NOTE! Don't actually pop the values until the result has
+                //       has been completed in case GC has to run during the
+                //       concatenation.
+                if (peek_b.is_string() && peek_a.is_string()) {
+                    ObjString* result = *peek_a.as_string() + *peek_b.as_string();
+                    pop();
+                    pop();
                     push(result);
                     break;
                 }

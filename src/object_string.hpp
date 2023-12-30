@@ -62,6 +62,7 @@ public:
     ObjString* operator+(const ObjString& rhs) const;
 
     std::size_t length() const { return m_string.size(); }
+    std::size_t string_bytes() const { return m_string.size() + 1; }
     const char* chars() const { return m_string.c_str(); }
     std::size_t hash() const { return m_hash; }
 
@@ -74,14 +75,21 @@ private:
     */ 
     const std::size_t m_hash{};
 
+
     ObjString(const char* chars, std::size_t length, std::size_t hash) : 
         Obj(ObjType::STRING),       
         m_string(chars, length),
-        m_hash(hash) { }
+        m_hash(hash) { 
+            Obj::add_bytes_allocated(string_bytes());
+        }
     ObjString(std::string&& text, std::size_t hash) : 
         Obj(ObjType::STRING), 
         m_string(std::move(text)),
-        m_hash(hash) {}
+        m_hash(hash) {
+            // Since we are taking ownership of this string, we consider it to
+            // be an "allocation" even though we didn't allocate it ourselves.
+            Obj::add_bytes_allocated(string_bytes());
+        }
 
     static ObjString* find_existing(const InternedStringKey& search);
     static void store_new(ObjString* str);
