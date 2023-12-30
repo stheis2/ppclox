@@ -19,6 +19,7 @@ enum class ObjType {
 
 enum class ObjGcColor {
     // White color means we have not reached or processed the object at all.
+    // When GC is done, white objects are the unreachable ones.
     WHITE,
     // Gray color means we know the object itself is reachable and should not be collected. 
     // But we have not yet finished tracing through it to see what other objects it references.
@@ -50,7 +51,7 @@ public:
     /** Virtual destructor ensures that deleting through base pointer will call derived destructors */
     virtual ~Obj() {
 #ifdef DEBUG_LOG_GC
-        printf("%p object type %d\n", this, m_type);
+        printf("%p object type %d. Color: %d\n", this, m_type, m_gc_color);
 #endif            
     }
 
@@ -63,25 +64,27 @@ protected:
 private:
     ObjType m_type{};
     ObjGcColor m_gc_color{};
-    /** 
-     * NOTE! Do NOT initialize this field. It gets set by the overloaded new operator.
-     * If we initialize it here, it will get initialized AFTER the new operator has run
-     * and so will override what was done in the new operator.
-     * @todo Maybe utilize an external list like a vector instead of an intrusive linked list?
-    */
-    Obj* m_next;
 
-    /** Pointer to head of linked list of objects*/
-    static Obj* s_objects_head;
+    /** 
+     * Master list of all allocated objects
+     * NOTE! Vector might not be the best choice for this. Ideally would want a collection
+     *       optimized for these access patterns, so this would need to be investigated. 
+     *       Clox uses an intrusive linked list but I'd prefer to avoid manual linked lists 
+     *       in favor of a C++ collection of some sort.
+     */
+    static std::vector<Obj*> s_all_objects;
 
     // Gray objects needing processing during garbage collection
     static std::vector<Obj*> s_gray_worklist;
 
     static void mark_gc_roots();
     static void trace_gc_references();
+    static void sweep();
 
     /** Blacken a gray object by first graying its references, then mark it as black */
     void blacken();
+    /** Reset object color to white */
+    void whiten() { m_gc_color = ObjGcColor::WHITE; };
 
 //TODO: Implement custom new and delete for objs? And how do we account for the ObjStrings
 // memory?   

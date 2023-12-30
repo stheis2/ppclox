@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "object.hpp"
 #include "compiler.hpp"
 #include "vm.hpp"
@@ -32,10 +34,9 @@ void* Obj::operator new(std::size_t size) {
 
     void* ptr = ::operator new(size);
 
-    // Whenever we allocate an Obj, we insert it into the linked list
+    // Whenever we allocate an Obj, add it to the master list
     Obj* obj = static_cast<Obj*>(ptr);
-    obj->m_next = s_objects_head;
-    s_objects_head = obj;
+    s_all_objects.push_back(obj);
 
 #ifdef DEBUG_LOG_GC
     printf("%p allocated %zu\n", ptr, size);
@@ -52,13 +53,11 @@ void Obj::operator delete(void *memory) {
 }
 
 void Obj::free_objects() {
-    Obj* object = s_objects_head;
-    while (object != nullptr) {
-        Obj* next = object->m_next;
-        delete object;
-        object = next;
+    while (s_all_objects.size() > 0) {
+        Obj* obj = s_all_objects.back();
+        delete obj;
+        s_all_objects.pop_back();
     }
-    s_objects_head = nullptr;
 }
 
 void Obj::collect_garbage() {
@@ -68,14 +67,14 @@ void Obj::collect_garbage() {
 
     mark_gc_roots();
     trace_gc_references();
+    sweep();
 
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
 #endif
 }
 
-Obj* Obj::s_objects_head{};
-
+std::vector<Obj*> Obj::s_all_objects{};
 std::vector<Obj*> Obj::s_gray_worklist{};
 
 void Obj::mark_gc_roots() {
@@ -91,6 +90,25 @@ void Obj::trace_gc_references() {
         Obj* gray = s_gray_worklist.back();
         s_gray_worklist.pop_back();
         gray->blacken();
+    }
+}
+
+void Obj::sweep() {
+    // Partition the list into non-white followed by white objects
+    auto white_base_iter = partition(s_all_objects.begin(), s_all_objects.end(), [](Obj* obj) { return obj->m_gc_color != ObjGcColor::WHITE; });
+
+    // Free all the white objects
+    for (auto free_iter = white_base_iter; free_iter != s_all_objects.end(); ++free_iter) {
+        Obj* free_me = *free_iter;
+        delete free_me;
+    }
+
+    // Remove all the now dangling pointers to white objects
+    s_all_objects.erase(white_base_iter, s_all_objects.end());
+
+    // Reset all remaining objects to white for the next GC
+    for (auto obj : s_all_objects) {
+        obj->whiten();
     }
 }
 
