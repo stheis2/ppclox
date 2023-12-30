@@ -1,6 +1,8 @@
 #ifndef ppclox_object_string_hpp
 #define ppclox_object_string_hpp
 
+#include <mutex>
+
 #include "common.hpp"
 #include "object.hpp"
 
@@ -86,6 +88,7 @@ private:
 
     /** Map used for de-deping ObjStrings */
     static std::unordered_map<InternedStringKey, ObjString*, InternedStringKeyHash> s_interned_strings;
+    static std::mutex s_interned_strings_mutex;
 };
 
 /** 

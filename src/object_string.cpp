@@ -31,6 +31,7 @@ InternedStringKey::InternedStringKey(std::string_view string_view) {
 
 // Initialize map to empty
 std::unordered_map<InternedStringKey, ObjString*, InternedStringKeyHash> ObjString::s_interned_strings{};
+std::mutex ObjString::s_interned_strings_mutex{};
 
 void ObjString::print() const {
     printf("%s", chars());
@@ -39,39 +40,48 @@ void ObjString::print() const {
 ObjString::~ObjString() {
     // Construct the search key we will use to find ourselves in the map
     InternedStringKey search(this);
-    // Upon destruction, we need to clean ourselves out of the map
-//FIX - should probably protect this with a lock so these can be used across threads 
-    s_interned_strings.erase(search);
+
+    {
+        // Upon destruction, we need to clean ourselves out of the map
+        std::lock_guard<std::mutex> lg(s_interned_strings_mutex);
+        s_interned_strings.erase(search);
+    }
 }
 
 ObjString* ObjString::copy_string(const char* chars, std::size_t length) {
     // Construct search key. Note that this will hash the string.
     InternedStringKey search(std::string_view(chars, length));
 
-//FIX - should probably protect this with a lock so these can be used across threads      
+    {
+        // Protect search and store new operations with a lock
+        std::lock_guard<std::mutex> lg(s_interned_strings_mutex);
 
-    ObjString* existing = find_existing(search);
-    if (existing != nullptr) return existing;
+        ObjString* existing = find_existing(search);
+        if (existing != nullptr) return existing;
 
-    // If it doesn't already exist, we need a new one
-    ObjString* str = new ObjString(chars, length, search.hash());
-    store_new(str);
-    return str;
+        // If it doesn't already exist, we need a new one
+        ObjString* str = new ObjString(chars, length, search.hash());
+        store_new(str);
+        return str;
+    }
 }
 
 ObjString* ObjString::take_string(std::string&& text) {
     // Construct search key. Note that this will hash the string.
     InternedStringKey search{std::string_view(text)};
 
-//FIX - should probably protect this with a lock so these can be used across threads    
+    {
+        // Protect search and store new operations with a lock
+        std::lock_guard<std::mutex> lg(s_interned_strings_mutex);
 
-    ObjString* existing = find_existing(search);
-    if (existing != nullptr) return existing;
+        ObjString* existing = find_existing(search);
+        if (existing != nullptr) return existing;
 
-    // If it doesn't already exist, we need a new one
-    ObjString* str = new ObjString(std::move(text), search.hash());
-    store_new(str);
-    return str;
+        // If it doesn't already exist, we need a new one
+        ObjString* str = new ObjString(std::move(text), search.hash());
+        store_new(str);
+        return str;
+    }
 }
 
 /** Add the two strings and return the result (usually a new string) */

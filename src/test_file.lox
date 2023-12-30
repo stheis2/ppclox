@@ -9,3 +9,8 @@ fun outer() {
 
 var closure = outer();
 closure();
+
+var a = "a";
+var b = "b";
+var c = a + b;
+var d = c + c;
