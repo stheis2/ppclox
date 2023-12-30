@@ -58,7 +58,15 @@ class Compiler {
 public:
     static ObjFunction* compile(const char* source);
 
-    Compiler(FunctionType function_type);
+    // NOTE! We pass in the ObjFunction instead of creating it inside
+    //       the compiler constructor since we want to avoid
+    //       GC potentially running when the Compiler is being constructed.
+    //       If we are constructing the Compiler inside the s_compilers
+    //       compiler stack, GC also has to iterate over that same stack
+    //       to mark roots, which is a potentially messy situation that
+    //       may or may not result in undefined behavior. We avoid this
+    //       by decoupling the two operations.
+    Compiler(ObjFunction* fun, FunctionType function_type);
 
     static void mark_gc_roots();
 
@@ -72,8 +80,8 @@ private:
      *       it seems like they don't necessarily need to be managed at runtime the same 
      *       way as objects created at runtime.
      */
-    ObjFunction* m_function;
-    FunctionType m_function_type;
+    ObjFunction* m_function{};
+    FunctionType m_function_type{};
     /** Locals are indexed by std::uint8_t at runtime, so thats the max we can currently support */
     static constexpr std::size_t k_locals_max = std::numeric_limits<std::uint8_t>::max() + 1;
     std::vector<Local> m_locals{};

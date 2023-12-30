@@ -59,8 +59,14 @@ ObjFunction* Compiler::compile(const char* source) {
     s_scanner = std::make_unique<Scanner>(source);
     s_parser = std::make_unique<Parser>();
 
+    // Create a new chunk and function to compile into
+    // NOTE! We have no name to assign to the script function,
+    //       so just leave it as nullptr
+    std::shared_ptr<Chunk> chunk = std::make_shared<Chunk>();
+    ObjFunction* fun = new ObjFunction(chunk, nullptr);
+
     // Create our initial compiler on the compiler stack
-    s_compilers.emplace_back(FunctionType::SCRIPT);
+    s_compilers.emplace_back(fun, FunctionType::SCRIPT);
 
     advance();
     while (!match(TokenType::END_OF_FILE)) {
@@ -78,20 +84,9 @@ ObjFunction* Compiler::compile(const char* source) {
     return had_error ? nullptr : function;
 }
 
-Compiler::Compiler(FunctionType function_type) : 
+Compiler::Compiler(ObjFunction* fun, FunctionType function_type) : 
+    m_function(fun),
     m_function_type(function_type) {
-    // Make a new chunk and function to compile into
-    std::shared_ptr<Chunk> chunk = std::make_shared<Chunk>();
-
-    // When compiling a function declaration, we call Compiler() ctor right 
-    // after we parse the function’s name. That means we can grab the name 
-    // right then from the previous token.
-    ObjString* name = nullptr;
-    if (function_type != FunctionType::SCRIPT) {
-        name = ObjString::copy_string(s_parser->previous.start, s_parser->previous.length);
-    }
-
-    m_function = new ObjFunction(chunk, name);
 
     // From now on, the compiler implicitly claims stack slot zero
     // for the VM's own internal use. It does this in form of a dummy local.
@@ -695,9 +690,18 @@ void Compiler::fun_declaration() {
 }
 
 void Compiler::function(FunctionType type) {
+    // When compiling a function declaration, we do so right 
+    // after we parse the function’s name. That means we can grab the name 
+    // right then from the previous token.
+    ObjString* name = ObjString::copy_string(s_parser->previous.start, s_parser->previous.length);
+
+    // Create new function and chunk that we can compile into
+    std::shared_ptr<Chunk> chunk = std::make_shared<Chunk>();
+    ObjFunction* fun = new ObjFunction(chunk, name);
+
     // When we start compiling a function, we need
     // to instantiate a new compiler on the stack.
-    s_compilers.emplace_back(type);
+    s_compilers.emplace_back(fun, type);
     begin_scope();
 
     consume(TokenType::LEFT_PAREN, "Expect '(' after function name.");
