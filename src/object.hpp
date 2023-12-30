@@ -27,14 +27,25 @@ public:
     static void* operator new(size_t size);
     static void operator delete(void *memory);
 
+    /** Collect all unreachable objects */
+    static void collect_garbage();
+
     /** Free all allocated objects */
     static void free_objects();
 
     /** Virtual destructor ensures that deleting through base pointer will call derived destructors */
-    virtual ~Obj() {}
+    virtual ~Obj() {
+#ifdef DEBUG_LOG_GC
+        printf("%p object type %d\n", this, m_type);
+#endif            
+    }
 
 protected:
-    Obj(ObjType type) : m_type(type) {}
+    Obj(ObjType type) : m_type(type) {
+#ifdef DEBUG_LOG_GC
+        printf("%p object type %d\n", this, m_type);
+#endif      
+    }
 private:
     ObjType m_type{};
     /** 
