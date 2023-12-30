@@ -17,9 +17,23 @@ enum class ObjType {
     UPVALUE
 };
 
+enum class ObjGcColor {
+    // White color means we have not reached or processed the object at all.
+    WHITE,
+    // Gray color means we know the object itself is reachable and should not be collected. 
+    // But we have not yet finished tracing through it to see what other objects it references.
+    GRAY,
+    // When we take a gray object and mark all of the objects it references, we then turn 
+    // the gray object black. This color means the mark phase is done processing that object.
+    BLACK
+};
+
 class Obj {
 public:
     ObjType type() const { return m_type; }
+
+    // Mark gray for the purposes of garbage collection
+    static void mark_gc_gray(Obj* obj);
 
     virtual void print() const;
 
@@ -41,13 +55,14 @@ public:
     }
 
 protected:
-    Obj(ObjType type) : m_type(type) {
+    Obj(ObjType type) : m_type(type), m_gc_color(ObjGcColor::WHITE) {
 #ifdef DEBUG_LOG_GC
         printf("%p object type %d\n", this, m_type);
 #endif      
     }
 private:
     ObjType m_type{};
+    ObjGcColor m_gc_color{};
     /** 
      * NOTE! Do NOT initialize this field. It gets set by the overloaded new operator.
      * If we initialize it here, it will get initialized AFTER the new operator has run
@@ -58,6 +73,11 @@ private:
 
     /** Pointer to head of linked list of objects*/
     static Obj* s_objects_head;
+
+    // Gray objects needing processing during garbage collection
+    static std::vector<Obj*> s_gray_worklist;
+
+    static void mark_gc_roots();
 
 //TODO: Implement custom new and delete for objs? And how do we account for the ObjStrings
 // memory?   

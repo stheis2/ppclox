@@ -100,6 +100,13 @@ Compiler::Compiler(FunctionType function_type) :
     m_locals.emplace_back();
 }
 
+void Compiler::mark_gc_roots() {
+    // All the functions on the compiler stack are roots
+    for (auto compiler : s_compilers) {
+        Obj::mark_gc_gray(compiler.m_function);
+    }
+}
+
 void Compiler::error_at(const Token& token, const char* message) {
     if (s_parser->panic_mode) return;
     s_parser->panic_mode = true;

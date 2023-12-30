@@ -1,4 +1,5 @@
 #include "value.hpp"
+#include "object.hpp"
 
 Value::Value(bool val) {
     m_type = ValueType::BOOL;
@@ -54,5 +55,11 @@ bool Value::operator==(const Value& rhs) const {
             // Should be unreachable, but just assume false
 // TODO: Throw an exception instead?
             return false;
+    }
+}
+
+void Value::mark_obj_gc_gray() {
+    if (is_obj()) {
+        Obj::mark_gc_gray(as_obj());
     }
 }

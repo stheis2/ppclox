@@ -60,6 +60,8 @@ public:
 
     Compiler(FunctionType function_type);
 
+    static void mark_gc_roots();
+
 private:
     /** 
      * @todo Can we do this safer than just a raw pointer? Maybe not. The compiler constructs the

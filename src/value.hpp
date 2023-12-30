@@ -55,6 +55,9 @@ public:
 
     /** Lox follows Ruby in that nil and false are falsey and every other value behaves like true. */
     bool is_falsey() const { return is_nil() || (is_bool() && !as_bool()); }
+
+    // If type is Obj, mark the value as gray for GC
+    void mark_obj_gc_gray();
 private:
     ValueType m_type{ValueType::NIL};
     union {

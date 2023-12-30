@@ -49,6 +49,8 @@ public:
     ~VM();
 
     InterpretResult interpret(const char* source);
+
+    void mark_gc_roots();
 private:
     /** 
      * There should be a practical limit on the number of stack frames so as to

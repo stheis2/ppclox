@@ -1,8 +1,24 @@
 #include "object.hpp"
-
+#include "compiler.hpp"
+#include "vm.hpp"
 
 void Obj::print() const {
     printf("Object: %d", m_type);
+}
+
+void Obj::mark_gc_gray(Obj* obj) {
+    if (obj == nullptr) return;
+    if (obj->m_gc_color != ObjGcColor::WHITE) return;
+
+#ifdef DEBUG_LOG_GC
+    printf("%p mark ", (void*)obj);
+    obj->print();
+    printf("\n");
+#endif    
+
+    // Mark this object gray and add it to the worklist for processing
+    obj->m_gc_color = ObjGcColor::GRAY;
+    s_gray_worklist.push_back(obj);
 }
 
 void* Obj::operator new(std::size_t size) {
@@ -52,3 +68,13 @@ void Obj::collect_garbage() {
 }
 
 Obj* Obj::s_objects_head{};
+
+std::vector<Obj*> Obj::s_gray_worklist{};
+
+void Obj::mark_gc_roots() {
+    // Tell the compiler to mark its roots
+    Compiler::mark_gc_roots();
+
+    // Tell the VM to mark its roots
+    g_vm.mark_gc_roots();
+}

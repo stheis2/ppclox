@@ -40,6 +40,29 @@ InterpretResult VM::interpret(const char* source) {
     return run();
 }
 
+void VM::mark_gc_roots() {
+    // Mark roots on the value stack
+    for (auto value : m_stack) {
+        value.mark_obj_gc_gray();
+    }
+
+    // Mark keys and values in globals table
+    for (auto pair : m_globals) {
+        Obj::mark_gc_gray(pair.first.obj_string());
+        pair.second.mark_obj_gc_gray();
+    }
+
+    // Mark closures in active call frames
+    for (auto frame : m_call_stack) {
+        Obj::mark_gc_gray(frame.m_closure);
+    }
+
+    // Mark open upvalues
+    for (auto pair : m_open_upvalues) {
+        Obj::mark_gc_gray(pair.second);
+    }
+}
+
 void VM::reset_stack() {
     m_stack.clear(); 
     m_stack.reserve(VALUE_STACK_INIT_CAPACITY);
