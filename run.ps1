@@ -9,7 +9,7 @@ try {
         # NOTE! /EHsc is included to silence warning C4530: 
         #       C++ exception handler used, but unwind semantics are not enabled. 
         #       Specify /EHsc
-        cl /std:c++latest /EHsc ../src/*.cpp /link /out:pplox.exe
+        cl /std:c++latest /EHsc ../*.cpp /link /out:pplox.exe
         if ($LASTEXITCODE -ne 0) {
             Write-Host ""
             Write-Host "Non-zero exit code from cl: $LASTEXITCODE"
@@ -22,7 +22,7 @@ try {
     }
 
     Write-Host ""
-    ./build/pplox ./src/test_file.lox
+    ./build/pplox ./test_file.lox
 }
 finally {
     Pop-Location
