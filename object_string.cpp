@@ -31,7 +31,7 @@ InternedStringKey::InternedStringKey(std::string_view string_view) {
 
 // Initialize map to empty
 std::unordered_map<InternedStringKey, ObjString*, InternedStringKeyHash> ObjString::s_interned_strings{};
-std::mutex ObjString::s_interned_strings_mutex{};
+std::recursive_mutex ObjString::s_interned_strings_mutex{};
 
 void ObjString::print() const {
     printf("%s", chars());
@@ -45,12 +45,9 @@ ObjString::~ObjString() {
     InternedStringKey search(this);
 
     {
-        printf("Grabbing destruction lock gaurd");
         // Upon destruction, we need to clean ourselves out of the map
-        //std::lock_guard<std::mutex> lg(s_interned_strings_mutex);
-        printf("Done Grabbing destruction lock gaurd");
+        std::lock_guard<std::recursive_mutex> lg(s_interned_strings_mutex);
         s_interned_strings.erase(search);
-        printf("Done erasing string.");
     }
 }
 
@@ -58,9 +55,14 @@ ObjString* ObjString::copy_string(const char* chars, std::size_t length) {
     // Construct search key. Note that this will hash the string.
     InternedStringKey search(std::string_view(chars, length));
 
+// TODO: Request GC pause/resume while we lock the string cache.
+//       Future concurrent GC might require taking locks, and we
+//       don't want to take any locks or destruct any strings
+//       while allocating a new one.
+
     {
         // Protect search and store new operations with a lock
-        std::lock_guard<std::mutex> lg(s_interned_strings_mutex);
+        std::lock_guard<std::recursive_mutex> lg(s_interned_strings_mutex);
 
         ObjString* existing = find_existing(search);
         if (existing != nullptr) return existing;
@@ -76,9 +78,14 @@ ObjString* ObjString::take_string(std::string&& text) {
     // Construct search key. Note that this will hash the string.
     InternedStringKey search{std::string_view(text)};
 
+// TODO: Request GC pause/resume while we lock the string cache.
+//       Future concurrent GC might require taking locks, and we
+//       don't want to take any locks or destruct any strings
+//       while allocating a new one.    
+
     {
         // Protect search and store new operations with a lock
-        std::lock_guard<std::mutex> lg(s_interned_strings_mutex);
+        std::lock_guard<std::recursive_mutex> lg(s_interned_strings_mutex);
 
         ObjString* existing = find_existing(search);
         if (existing != nullptr) return existing;

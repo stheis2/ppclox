@@ -100,7 +100,7 @@ private:
      * Lock used to protect operations involving s_interned_strings. Although not currently used
      * this way, this allows this de-duping mechanism to be used in multi-threaded scenarios.
      */
-    static std::mutex s_interned_strings_mutex;
+    static std::recursive_mutex s_interned_strings_mutex;
 };
 
 /** 
