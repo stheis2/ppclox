@@ -2,6 +2,7 @@
 #define ppclox_compiler_hpp
 
 #include <memory>
+#include <unordered_set>
 
 #include "common.hpp"
 #include "chunk.hpp"
@@ -101,6 +102,12 @@ private:
     static Compiler& current() { return s_compilers.at(s_compilers.size() - 1); }
     static CompilerRevIterator compilers_rbegin() { return s_compilers.rbegin(); }
     static CompilerRevIterator compilers_rend() { return s_compilers.rend(); }
+
+    /** 
+     * During compilation, we sometimes need to hang on to some objects to prevent them
+     * from being GC'd out from under us. We store pointers to these objects here.
+    */
+    static std::unordered_set<Obj*> s_temporary_roots;
 
     static ParseRule s_rules[];
     static ParseRule& get_rule(TokenType type) { return s_rules[std::to_underlying(type)]; }

@@ -6,6 +6,7 @@
 std::unique_ptr<Scanner> Compiler::s_scanner{};
 std::unique_ptr<Parser> Compiler::s_parser{};
 std::vector<Compiler> Compiler::s_compilers{};
+std::unordered_set<Obj*> Compiler::s_temporary_roots{};
 
 // NOTE! Unfortunately C++ doesn't support array initialization
 //       with enum indices, so we must resort to comments.
@@ -99,6 +100,11 @@ void Compiler::mark_gc_roots() {
     // All the functions on the compiler stack are roots
     for (auto compiler : s_compilers) {
         Obj::mark_gc_gray(compiler.m_function);
+    }
+
+    // We also need to mark any temporary roots
+    for (auto temp : s_temporary_roots) {
+        Obj::mark_gc_gray(temp);
     }
 }
 
@@ -694,10 +700,14 @@ void Compiler::function(FunctionType type) {
     // after we parse the function’s name. That means we can grab the name 
     // right then from the previous token.
     ObjString* name = ObjString::copy_string(s_parser->previous.start, s_parser->previous.length);
+    // Allocating an ObjFunction below might cause a GC, so we need to preserve the name
+    // as a temporary root until that is done.
+    s_temporary_roots.insert(name);
 
     // Create new function and chunk that we can compile into
     std::shared_ptr<Chunk> chunk = std::make_shared<Chunk>();
     ObjFunction* fun = new ObjFunction(chunk, name);
+    s_temporary_roots.erase(name);
 
     // When we start compiling a function, we need
     // to instantiate a new compiler on the stack.
