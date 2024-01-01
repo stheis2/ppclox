@@ -463,6 +463,10 @@ InterpretResult VM::run() {
                 //       we would need to update that here.
                 break;
             }
+            case std::to_underlying(OpCode::CLASS): {
+                push(new ObjClass(read_string()));
+                break;
+            }
             default:
                 printf("Instruction not recognized: %d\n", instruction);
                 return InterpretResult::RUNTIME_ERROR;

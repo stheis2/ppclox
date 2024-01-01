@@ -6,6 +6,7 @@
 
 #include "chunk.hpp"
 #include "object_function.hpp"
+#include "object_class.hpp"
 
 #define VALUE_STACK_INIT_CAPACITY 256
 

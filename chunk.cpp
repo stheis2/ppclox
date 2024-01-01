@@ -98,6 +98,8 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
             return simple_instruction("OP_CLOSE_UPVALUE", offset);            
         case std::to_underlying(OpCode::RETURN):
             return simple_instruction("OP_RETURN", offset);
+        case std::to_underlying(OpCode::CLASS):
+            return constant_instruction("OP_CLASS", *this, offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;

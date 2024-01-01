@@ -1,11 +1,5 @@
-{
-  var a = "a";
-  var b = "b";
-  var c = a + b;
-  var d = c + c;
-}
-
-print "done!" + "another one!";
+class Brioche {}
+print Brioche;
 
 //fun outer() {
   //var x = "outside";

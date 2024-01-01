@@ -172,6 +172,7 @@ private:
     static void expression();
     static void declaration();
     static void statement();
+    static void class_declaration();
     static void fun_declaration();
     static void function(FunctionType type);
     static void var_declaration();
