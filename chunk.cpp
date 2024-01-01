@@ -64,6 +64,10 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
             return byte_instruction("OP_GET_UPVALUE", *this, offset);
         case std::to_underlying(OpCode::SET_UPVALUE):
             return byte_instruction("OP_SET_UPVALUE", *this, offset);
+         case std::to_underlying(OpCode::GET_PROPERTY):
+            return constant_instruction("OP_GET_PROPERTY", *this, offset);
+        case std::to_underlying(OpCode::SET_PROPERTY):
+            return constant_instruction("OP_SET_PROPERTY", *this, offset);
         case std::to_underlying(OpCode::EQUAL):
             return simple_instruction("OP_EQUAL", offset);
         case std::to_underlying(OpCode::GREATER):

@@ -17,6 +17,8 @@ enum class OpCode : std::uint8_t {
     SET_GLOBAL,
     GET_UPVALUE,
     SET_UPVALUE,
+    GET_PROPERTY,
+    SET_PROPERTY,
     EQUAL,
     GREATER,
     LESS,

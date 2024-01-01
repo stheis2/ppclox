@@ -300,6 +300,44 @@ InterpretResult VM::run() {
                 }
                 break;
             }
+            case std::to_underlying(OpCode::GET_PROPERTY): {
+                if (!peek(0).is_instance()) {
+                    runtime_error("Only instances have properties.");
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+
+                ObjInstance* instance = peek(0).as_instance();
+                ObjString* name = read_string();
+
+                auto value_opt = instance->get_field(name);
+                if (value_opt.has_value()) {
+                    // Pop the instance and push the value
+                    pop();
+                    push(value_opt.value());
+                    break;
+                }
+
+                runtime_error("Undefined property '%s'.", name->chars());
+                return InterpretResult::RUNTIME_ERROR;
+            }
+            case std::to_underlying(OpCode::SET_PROPERTY): {
+                if (!peek(1).is_instance()) {
+                    runtime_error("Only instances have fields.");
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                ObjInstance* instance = peek(1).as_instance();
+                ObjString* name = read_string();
+                // NOTE! Setting fields does inform the garbage collector
+                //       of additional bytes allocated, so we should be careful
+                //       not to pop stuff off the stack during the insert
+                //       in case of GC.
+                instance->set_field(name, peek(0));
+                Value value = pop();
+                pop();
+                push(value);
+                break;
+
+            }
             case std::to_underlying(OpCode::EQUAL): {
                 Value b = pop();
                 Value a = pop();

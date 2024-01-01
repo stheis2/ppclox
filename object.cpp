@@ -175,6 +175,8 @@ void Obj::blacken() {
     printf("\n");
 #endif    
 
+// TODO: Could move responsibility for tracing references down into each subclass,
+// e.g. make it a virtual method.
     switch (m_type) {
         case ObjType::CLASS: {
             ObjClass* klass = (ObjClass*)this;
@@ -200,10 +202,7 @@ void Obj::blacken() {
         case ObjType::INSTANCE: {
             ObjInstance* instance = (ObjInstance*)this;
             Obj::mark_gc_gray(instance->get_class());
-            for (auto pair : instance->fields()) {
-                Obj::mark_gc_gray(pair.first.obj_string());
-                pair.second.mark_obj_gc_gray();
-            }
+            instance->mark_fields_gc_gray();
         }  
         case ObjType::UPVALUE: {
             ((ObjUpvalue*)this)->closed_value().mark_obj_gc_gray();

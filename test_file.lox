@@ -1,9 +1,9 @@
-class Brioche {}
-print Brioche;
-print Brioche();
+class Pair {}
 
-var instance2 = Brioche();
-print instance2;
+var pair = Pair();
+pair.first = 1;
+pair.second = 2;
+print pair.first + pair.second; // 3
 
 //fun outer() {
   //var x = "outside";

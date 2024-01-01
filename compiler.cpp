@@ -18,7 +18,7 @@ ParseRule Compiler::s_rules[] = {
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::LEFT_BRACE]     
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::RIGHT_BRACE]   
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::COMMA]         
-    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::DOT]           
+    {nullptr,     dot,       Precedence::CALL},         // [TokenType::DOT]           
     {unary,       binary,    Precedence::TERM},         // [TokenType::MINUS]         
     {nullptr,     binary,    Precedence::TERM},         // [TokenType::PLUS]          
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::SEMICOLON]     
@@ -549,6 +549,18 @@ void Compiler::binary(bool can_assign) {
 void Compiler::call(bool can_assign) {
     std::uint8_t arg_count = argument_list();
     emit_opcode_arg(OpCode::CALL, arg_count);
+}
+
+void Compiler::dot(bool can_assign) {
+    consume(TokenType::IDENTIFIER, "Expect property name after '.'.");
+    uint8_t name = identifier_constant(s_parser->previous);
+
+    if (can_assign && match(TokenType::EQUAL)) {
+        expression();
+        emit_opcode_arg(OpCode::SET_PROPERTY, name);
+    } else {
+        emit_opcode_arg(OpCode::GET_PROPERTY, name);
+    }
 }
 
 std::uint8_t Compiler::argument_list() {

@@ -42,6 +42,9 @@
     <ClCompile Include="vm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="object_class.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="chunk.hpp">

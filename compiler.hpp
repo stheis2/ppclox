@@ -161,6 +161,7 @@ private:
     static void or_(bool can_assign);
     static void binary(bool can_assign);
     static void call(bool can_assign);
+    static void dot(bool can_assign);
     static std::uint8_t argument_list();
     static void literal(bool can_assign);
     static void grouping(bool can_assign);
