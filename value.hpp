@@ -8,6 +8,7 @@
 // We forward declare these instead of including their headers to avoid circular
 // dependencies.
 class ObjClass;
+class ObjInstance;
 class ObjFunction;
 class ObjClosure;
 class ObjNative;
@@ -47,11 +48,13 @@ public:
     bool is_class() const { return is_obj_type(ObjType::CLASS); }
     bool is_closure() const { return is_obj_type(ObjType::CLOSURE); }
     bool is_function() const { return is_obj_type(ObjType::FUNCTION); }
+    bool is_instance() const { return is_obj_type(ObjType::INSTANCE); }
     bool is_native() const { return is_obj_type(ObjType::NATIVE); }
 
     ObjClass* as_class() const { return (ObjClass*)as_obj(); }
     ObjClosure* as_closure() const { return (ObjClosure*)as_obj(); }
     ObjFunction* as_function() const { return (ObjFunction*)as_obj(); }
+    ObjInstance* as_instance() const { return (ObjInstance*)as_obj(); }
     ObjNative* as_native() const { return (ObjNative*)as_obj(); }
     ObjString* as_string() const { return (ObjString*)as_obj(); }
     const char* as_cstring() const { return ((ObjString*)as_obj())->chars(); }

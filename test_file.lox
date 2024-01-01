@@ -1,5 +1,9 @@
 class Brioche {}
 print Brioche;
+print Brioche();
+
+var instance2 = Brioche();
+print instance2;
 
 //fun outer() {
   //var x = "outside";

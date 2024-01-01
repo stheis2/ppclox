@@ -123,6 +123,27 @@ Value VM::peek(std::size_t distance) {
 bool VM::call_value(Value callee, std::size_t arg_count) {
     if (callee.is_obj()) {
         switch (callee.obj_type()) {
+            case ObjType::CLASS: {
+                ObjClass* klass = callee.as_class();
+                // Create the new instance
+                // NOTE! Be sure to do this while the class
+                //       is still on the stack to avoid it
+                //       getting garbage collected!
+                ObjInstance* instance = new ObjInstance(klass);
+
+                // Pop all arguments off the stack
+                for (std::size_t arg = 0; arg < arg_count; ++arg) {
+                    pop();
+                }
+                // Pop class off the stack
+                // NOTE! All these pops will NOT allocate new Obj's,
+                //       so we don't have to worry about GC running
+                //       here.
+                pop();
+                // Push created instance on the stack
+                push(instance);
+                return true;
+            }
             case ObjType::CLOSURE:
                 return call(callee.as_closure(), arg_count);
             case ObjType::NATIVE: {

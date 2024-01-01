@@ -13,6 +13,7 @@ enum class ObjType {
     CLASS,
     CLOSURE,
     FUNCTION,
+    INSTANCE,
     NATIVE,
     STRING,
     UPVALUE

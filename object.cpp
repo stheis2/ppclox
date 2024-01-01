@@ -196,6 +196,14 @@ void Obj::blacken() {
                 val.mark_obj_gc_gray();
             }
             break;
+        }
+        case ObjType::INSTANCE: {
+            ObjInstance* instance = (ObjInstance*)this;
+            Obj::mark_gc_gray(instance->get_class());
+            for (auto pair : instance->fields()) {
+                Obj::mark_gc_gray(pair.first.obj_string());
+                pair.second.mark_obj_gc_gray();
+            }
         }  
         case ObjType::UPVALUE: {
             ((ObjUpvalue*)this)->closed_value().mark_obj_gc_gray();
