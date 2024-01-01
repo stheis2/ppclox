@@ -5,6 +5,7 @@
 #include "vm.hpp"
 #include "object_function.hpp"
 #include "object_string.hpp"
+#include "object_class.hpp"
 
 void Obj::print() const {
     printf("Object: %d", m_type);
@@ -175,6 +176,11 @@ void Obj::blacken() {
 #endif    
 
     switch (m_type) {
+        case ObjType::CLASS: {
+            ObjClass* klass = (ObjClass*)this;
+            Obj::mark_gc_gray(klass->name());
+            break;
+        }
         case ObjType::CLOSURE: {
             ObjClosure* closure = (ObjClosure*)this;
             Obj::mark_gc_gray(closure->function());

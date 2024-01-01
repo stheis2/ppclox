@@ -35,6 +35,7 @@
     <ClInclude Include="compiler.hpp" />
     <ClInclude Include="object.hpp" />
     <ClInclude Include="object_all_types.hpp" />
+    <ClInclude Include="object_class.hpp" />
     <ClInclude Include="object_function.hpp" />
     <ClInclude Include="object_string.hpp" />
     <ClInclude Include="scanner.hpp" />
