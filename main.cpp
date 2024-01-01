@@ -69,7 +69,10 @@ int main(int argc, const char* argv[]) {
         std::exit(64);
     }
 
-    /** Free all objects before program exit */
+    // Do a final garbage collection to clean up anything no longer reachable
+    Obj::collect_garbage();
+
+    /** Free any remaining objects before program exit */
     Obj::free_objects();
 
 #if false
