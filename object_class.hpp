@@ -14,12 +14,19 @@
 class ObjClass : public Obj {
 public:
     ObjClass(ObjString* name) : Obj(ObjType::CLASS), m_name(name) {}
+    ~ObjClass();
 
     void print() const override { printf("%s class", m_name->chars()); }
 
     ObjString* name() { return m_name; }
+    std::optional<Value> get_method(ObjString* name);
+    void set_method(ObjString* name, Value value);
+    void mark_methods_gc_gray();
 private:
     ObjString* m_name{};
+//TODO: I think these Values are always ObjClosures, so we could store them
+//      as ObjClosure* directly potentially.
+    std::unordered_map<ObjStringRef, Value, ObjStringRefHash> m_methods{};
 };
 
 class ObjInstance : public Obj {

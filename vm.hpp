@@ -84,6 +84,7 @@ private:
     ObjUpvalue* capture_upvalue(std::size_t stack_index);
     // Close upvalues starting at the given index and proceeding to the top of the stack
     void close_upvalues(std::size_t start_index);
+    void define_method(ObjString* name);
 
     InterpretResult run();
 

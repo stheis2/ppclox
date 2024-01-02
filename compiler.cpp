@@ -701,14 +701,31 @@ void Compiler::statement() {
 
 void Compiler::class_declaration() {
     consume(TokenType::IDENTIFIER, "Expect class name.");
+    Token class_name = s_parser->previous;
     std::uint8_t name_constant = identifier_constant(s_parser->previous);
     declare_variable();
 
     emit_opcode_arg(OpCode::CLASS, name_constant);
     define_variable(name_constant);
 
+    // Before we start binding methods, we emit whatever 
+    // code is necessary to load the class back on top of 
+    // the stack.
+    // Right before compiling the class body, we call 
+    // namedVariable(). That helper function generates code 
+    // to load a variable with the given name onto the stack.
+    // Then we compile the methods.
+    named_variable(class_name, false);
+
     consume(TokenType::LEFT_BRACE, "Expect '{' before class body.");
+    while (!check(TokenType::RIGHT_BRACE) && !check(TokenType::END_OF_FILE)) {
+        method();
+    }
     consume(TokenType::RIGHT_BRACE, "Expect '}' after class body.");
+    // Once we’ve reached the end of the methods, we no 
+    // longer need the class and tell the VM to pop it off 
+    // the stack.
+    emit_opcode(OpCode::POP);
 }
 
 void Compiler::fun_declaration() {
@@ -769,6 +786,15 @@ void Compiler::function(FunctionType type) {
         emit_byte(upvalue.is_local ? 1 : 0);
         emit_byte(upvalue.index);
     }
+}
+
+void Compiler::method() {
+    consume(TokenType::IDENTIFIER, "Expect method name.");
+    uint8_t constant = identifier_constant(s_parser->previous);
+
+    FunctionType type = FunctionType::FUNCTION;
+    function(type);
+    emit_opcode_arg(OpCode::METHOD, constant);
 }
 
 void Compiler::var_declaration() {

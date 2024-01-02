@@ -181,6 +181,7 @@ void Obj::blacken() {
         case ObjType::CLASS: {
             ObjClass* klass = (ObjClass*)this;
             Obj::mark_gc_gray(klass->name());
+            klass->mark_methods_gc_gray();
             break;
         }
         case ObjType::CLOSURE: {

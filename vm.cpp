@@ -209,6 +209,22 @@ void VM::close_upvalues(std::size_t start_index) {
     m_open_upvalues.erase(m_open_upvalues.lower_bound(start_index), m_open_upvalues.end());
 }
 
+void VM::define_method(ObjString* name) {
+    // The method closure is on top of the stack, above the 
+    // class it will be bound to. We read those two stack 
+    // slots and store the closure in the class’s method table. Then we pop the closure since we’re done with it.
+    Value method = peek(0);
+    // Note that we don’t do any runtime type checking on the 
+    // closure or class object. That AS_CLASS() call is safe 
+    // because the compiler itself generated the code that 
+    // causes the class to be in that stack slot. The VM trusts
+    // its own compiler.
+    ObjClass* klass = peek(1).as_class();
+    klass->set_method(name, method);
+    pop();
+
+}
+
 InterpretResult VM::run() {
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -524,6 +540,10 @@ InterpretResult VM::run() {
             }
             case std::to_underlying(OpCode::CLASS): {
                 push(new ObjClass(read_string()));
+                break;
+            }
+            case std::to_underlying(OpCode::METHOD): {
+                define_method(read_string());
                 break;
             }
             default:
