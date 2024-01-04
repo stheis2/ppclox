@@ -7,6 +7,7 @@
 
 // We forward declare these instead of including their headers to avoid circular
 // dependencies.
+class ObjBoundMethod;
 class ObjClass;
 class ObjInstance;
 class ObjFunction;
@@ -44,6 +45,7 @@ public:
 
     ObjType obj_type() const { return as_obj()->type(); }
     bool is_obj_type(ObjType type) const { return is_obj() && as_obj()->type() == type; }
+    bool is_bound_method() const { return is_obj_type(ObjType::BOUND_METHOD); }
     bool is_string() const { return is_obj_type(ObjType::STRING); }
     bool is_class() const { return is_obj_type(ObjType::CLASS); }
     bool is_closure() const { return is_obj_type(ObjType::CLOSURE); }
@@ -51,6 +53,7 @@ public:
     bool is_instance() const { return is_obj_type(ObjType::INSTANCE); }
     bool is_native() const { return is_obj_type(ObjType::NATIVE); }
 
+    ObjBoundMethod* as_bound_method() const { return (ObjBoundMethod*)as_obj(); }
     ObjClass* as_class() const { return (ObjClass*)as_obj(); }
     ObjClosure* as_closure() const { return (ObjClosure*)as_obj(); }
     ObjFunction* as_function() const { return (ObjFunction*)as_obj(); }

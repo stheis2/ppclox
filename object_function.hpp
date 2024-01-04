@@ -11,6 +11,7 @@
 // We forward declare these instead of including their headers to avoid circular
 // dependencies.
 class Chunk;
+class ObjInstance;
 
 enum class FunctionType {
     FUNCTION,
@@ -85,6 +86,25 @@ public:
 private:
     ObjFunction* m_function{};
     std::vector<ObjUpvalue*> m_upvalues{};
+};
+
+class ObjBoundMethod : public Obj {
+public:
+    ObjBoundMethod(ObjInstance* receiver, ObjClosure* method) : 
+        Obj(ObjType::BOUND_METHOD), m_receiver(receiver), m_method(method) {}
+
+    // A bound method prints exactly the same way as a function. From the user’s perspective, 
+    // a bound method is a function. It’s an object they can call. We don’t expose that the VM 
+    // implements bound methods using a different object type.
+    void print() const override { m_method->function()->print(); }
+
+    ObjInstance* receiver() { return m_receiver; }
+    ObjClosure* method() { return m_method; }
+private:
+    // Clox types this as Value, but its always an ObjInstance.
+    // Let's type it that way and see how painful it is for now.
+    ObjInstance* m_receiver{};
+    ObjClosure* m_method{};
 };
 
 typedef std::vector<Value>::iterator NativeFnArgsIterator;

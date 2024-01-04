@@ -176,8 +176,15 @@ void Obj::blacken() {
 #endif    
 
 // TODO: Could move responsibility for tracing references down into each subclass,
-// e.g. make it a virtual method.
+// e.g. make it a virtual method. Though the explicit switch here might be more performant.
+// Might need to measure it.
     switch (m_type) {
+        case ObjType::BOUND_METHOD: {
+            ObjBoundMethod* bound = (ObjBoundMethod*)this;
+            Obj::mark_gc_gray(bound->receiver());
+            Obj::mark_gc_gray(bound->method());
+            break;
+        }
         case ObjType::CLASS: {
             ObjClass* klass = (ObjClass*)this;
             Obj::mark_gc_gray(klass->name());

@@ -10,6 +10,7 @@
 #include "common.hpp"
 
 enum class ObjType {
+    BOUND_METHOD,
     CLASS,
     CLOSURE,
     FUNCTION,
