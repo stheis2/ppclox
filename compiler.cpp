@@ -6,6 +6,7 @@
 std::unique_ptr<Scanner> Compiler::s_scanner{};
 std::unique_ptr<Parser> Compiler::s_parser{};
 std::vector<Compiler> Compiler::s_compilers{};
+std::vector<ClassCompiler> Compiler::s_class_compilers{};
 std::unordered_set<Obj*> Compiler::s_temporary_roots{};
 
 // NOTE! Unfortunately C++ doesn't support array initialization
@@ -655,6 +656,11 @@ void Compiler::variable(bool can_assign) {
 }
 
 void Compiler::this_(bool can_assign) {
+    // Use of "this" outside of a class is forbidden
+    if (s_class_compilers.size() == 0) {
+        error("Can't use 'this' outside of a class.");
+        return;
+    }
     variable(false);
 }
 
@@ -723,6 +729,10 @@ void Compiler::class_declaration() {
     emit_opcode_arg(OpCode::CLASS, name_constant);
     define_variable(name_constant);
 
+    // When the compiler begins compiling a class, it pushes a new 
+    // ClassCompiler onto that stack.
+    s_class_compilers.emplace_back();
+
     // Before we start binding methods, we emit whatever 
     // code is necessary to load the class back on top of 
     // the stack.
@@ -741,6 +751,9 @@ void Compiler::class_declaration() {
     // longer need the class and tell the VM to pop it off 
     // the stack.
     emit_opcode(OpCode::POP);
+
+    // At the end of the class body, we pop that compiler off the stack
+    s_class_compilers.pop_back();
 }
 
 void Compiler::fun_declaration() {

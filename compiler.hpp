@@ -19,6 +19,10 @@ public:
     bool panic_mode{};
 };
 
+class ClassCompiler {
+
+};
+
 enum class Precedence {
     NONE,
     ASSIGNMENT,  // =
@@ -55,6 +59,10 @@ public:
     bool is_local{};
 };
 
+//FIX - Should probably rework Compiler class to not use static.
+//      Instead, there should be a Compiler class that gets instantiated,
+//      and FunctionCompiler classes that contain the data for compiling
+//      an individual function.
 class Compiler {
 public:
     static ObjFunction* compile(const char* source);
@@ -102,6 +110,9 @@ private:
     static Compiler& current() { return s_compilers.at(s_compilers.size() - 1); }
     static CompilerRevIterator compilers_rbegin() { return s_compilers.rbegin(); }
     static CompilerRevIterator compilers_rend() { return s_compilers.rend(); }
+
+    /** During compilation, we also maintain a stack of ClassCompilers */
+    static std::vector<ClassCompiler> s_class_compilers;
 
     /** 
      * During compilation, we sometimes need to hang on to some objects to prevent them

@@ -22,6 +22,12 @@
 //var scone = Scone();
 //scone.topping("berries", "cream");
 
+//print this; // At top level.
+
+//fun notMethod() {
+  //print this; // In a function.
+//}
+
 class Nested {
   method() {
     fun function() {
