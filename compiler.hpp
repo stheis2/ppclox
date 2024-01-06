@@ -65,6 +65,8 @@ public:
 //      an individual function.
 class Compiler {
 public:
+    static constexpr std::string_view k_init_string = "init";
+
     static ObjFunction* compile(const char* source);
 
     // NOTE! We pass in the ObjFunction instead of creating it inside
@@ -145,7 +147,7 @@ private:
     static std::size_t emit_jump(OpCode instruction);
     static void patch_jump(std::size_t offset);
     static void emit_loop(std::size_t loop_start);
-    static void emit_nil_return();
+    static void emit_implicit_return();
     /** Add constant to the current chunk and return its index */
     static std::uint8_t make_constant(Value value);
     static std::uint8_t identifier_constant(const Token& name);

@@ -22,8 +22,19 @@ VM::VM() {
 
     // Define our native functions
     define_native("clock", clock_native);
+    
+    // Intern our initializer method string for fast lookups.
+    // Null it out first out of paranoia of the GC reading it.
+    // NOTE! We don't actually free this and allow the final cleanup
+    //       Obj::free_objects to free this.
+    // What we should *probably* do before program exit is have the VM
+    // release all it's references, then collect garbage. At that point,
+    // I *think* Obj::free_objects would have nothing left to free.
+    m_init_string = nullptr;
+    m_init_string = ObjString::copy_string(Compiler::k_init_string.data(), Compiler::k_init_string.length());
 }
-VM::~VM() { }
+VM::~VM() {
+}
 
 InterpretResult VM::interpret(const char* source) {
     ObjFunction* function = Compiler::compile(source);
@@ -61,6 +72,9 @@ void VM::mark_gc_roots() {
     for (auto pair : m_open_upvalues) {
         Obj::mark_gc_gray(pair.second);
     }
+
+    // Mark the init string used for looking up initializers
+    Obj::mark_gc_gray(m_init_string);
 }
 
 void VM::reset_stack() {
@@ -145,17 +159,21 @@ bool VM::call_value(Value callee, std::size_t arg_count) {
                 //       getting garbage collected!
                 ObjInstance* instance = new ObjInstance(klass);
 
-                // Pop all arguments off the stack
-                for (std::size_t arg = 0; arg < arg_count; ++arg) {
-                    pop();
+                // Replace/patch the class on the stack with the instance.
+                // We just need to skip over any arguments passed to
+                // the initializer.
+                patch(instance, arg_count);
+
+                // Check for an initializer
+                auto maybe_initializer = klass->get_method(m_init_string);
+                if (maybe_initializer.has_value()) {
+                    return call(maybe_initializer.value().as_closure(), arg_count);
+                } else if (arg_count != 0) {
+                    // Passing arguments when there isn't an initializer
+                    // doesn't make sense and is an error.
+                    runtime_error("Expected 0 arguments but got %d.", arg_count);
+                    return false;
                 }
-                // Pop class off the stack
-                // NOTE! All these pops will NOT allocate new Obj's,
-                //       so we don't have to worry about GC running
-                //       here.
-                pop();
-                // Push created instance on the stack
-                push(instance);
                 return true;
             }
             case ObjType::CLOSURE:

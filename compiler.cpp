@@ -263,9 +263,15 @@ void Compiler::emit_loop(std::size_t loop_start) {
     emit_byte(lo_byte);
 }
 
-void Compiler::emit_nil_return() {
-    /** If a function does not explicitly return, it returns nil */
-    emit_opcode(OpCode::NIL);
+void Compiler::emit_implicit_return() {
+    if (current().m_function_type == FunctionType::INITIALIZER) {
+        // In an initializer, instead of pushing nil onto the stack before returning, 
+        // we load slot zero, which contains the instance. (e.g. implicitly return "this") 
+        emit_opcode_arg(OpCode::GET_LOCAL, 0);
+    } else {
+        /** If a function does not explicitly return, it returns nil */
+        emit_opcode(OpCode::NIL);
+    }
     emit_opcode(OpCode::RETURN);
 }
 
@@ -393,7 +399,7 @@ void Compiler::add_local(Token name) {
 
 
 ObjFunction* Compiler::end_compiler(std::vector<Upvalue>& out_upvalues) {
-    emit_nil_return();
+    emit_implicit_return();
     ObjFunction* function = current().m_function;
 
 #ifdef DEBUG_PRINT_CODE
@@ -821,6 +827,9 @@ void Compiler::method() {
     uint8_t constant = identifier_constant(s_parser->previous);
 
     FunctionType type = FunctionType::METHOD;
+    if (s_parser->previous.as_string_view() == k_init_string) {
+        type = FunctionType::INITIALIZER;
+    }
     function(type);
     emit_opcode_arg(OpCode::METHOD, constant);
 }
@@ -911,8 +920,12 @@ void Compiler::return_statement() {
     }
 
     if (match(TokenType::SEMICOLON)) {
-        emit_nil_return();
+        emit_implicit_return();
     } else {
+        if (current().m_function_type == FunctionType::INITIALIZER) {
+            error("Can't return a value from an initializer.");
+        }
+
         expression();
         consume(TokenType::SEMICOLON, "Expect ';' after return value.");
         emit_opcode(OpCode::RETURN);

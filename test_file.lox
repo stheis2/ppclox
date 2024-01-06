@@ -28,14 +28,33 @@
   //print this; // In a function.
 //}
 
-class Nested {
-  method() {
-    fun function() {
-      print this;
-    }
+//class Nested {
+  //method() {
+    //fun function() {
+     // print this;
+    //}
 
-    function();
+    //function();
+  //}
+//}
+
+//Nested().method();
+
+class CoffeeMaker {
+  init(coffee) {
+    this.coffee = coffee;
+  }
+
+  brew() {
+    print "Enjoy your cup of " + this.coffee;
+
+    // No reusing the grounds!
+    this.coffee = nil;
   }
 }
 
-Nested().method();
+var maker = CoffeeMaker("coffee and chicory");
+//maker.coffee = "coffee and chicory";
+maker.brew();
+
+print "made it!";

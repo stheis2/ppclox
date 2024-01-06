@@ -73,6 +73,8 @@ private:
      */
     std::map<std::size_t, ObjUpvalue*> m_open_upvalues{};
 
+    ObjString* m_init_string{};
+
     void reset_stack();
     void runtime_error(const char* format, ...);
     void define_native(const char* name, NativeFn function);

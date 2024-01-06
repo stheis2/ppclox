@@ -15,6 +15,7 @@ class ObjInstance;
 
 enum class FunctionType {
     FUNCTION,
+    INITIALIZER,
     METHOD,
     SCRIPT
 };
