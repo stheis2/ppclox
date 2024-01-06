@@ -47,6 +47,11 @@ public:
         start = ""; 
     }
 
+    Token(std::string_view string_view) {
+        start = string_view.data();
+        length = string_view.length();
+    }
+
     const std::string_view as_string_view() const { return std::string_view(start, length); }
 };
 

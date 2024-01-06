@@ -47,7 +47,7 @@ ParseRule Compiler::s_rules[] = {
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::PRINT]         
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::RETURN]        
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::SUPER]         
-    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::THIS]          
+    {this_,       nullptr,   Precedence::NONE},         // [TokenType::THIS]          
     {literal,     nullptr,   Precedence::NONE},         // [TokenType::TRUE]          
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::VAR]           
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::WHILE]         
@@ -93,7 +93,18 @@ Compiler::Compiler(ObjFunction* fun, FunctionType function_type) :
     // for the VM's own internal use. It does this in form of a dummy local.
     // We give it an empty name so that the user can’t write an identifier that refers to it.
     // For the time being, this stack slot is used by the function being called.
-    m_locals.emplace_back();
+    //
+    // For method calls, we can repurpose that slot to store the receiver. 
+    // Slot zero will store the instance that this is bound to. In order to 
+    // compile this expressions, the compiler simply needs to give the correct
+    // name to that local variable.
+    if (function_type != FunctionType::FUNCTION) {
+        m_locals.emplace_back(Local {
+            .name = Token("this"),
+        });
+    } else {
+        m_locals.emplace_back();
+    }
 }
 
 void Compiler::mark_gc_roots() {
@@ -643,6 +654,10 @@ void Compiler::variable(bool can_assign) {
     named_variable(s_parser->previous, can_assign);
 }
 
+void Compiler::this_(bool can_assign) {
+    variable(false);
+}
+
 void Compiler::unary(bool can_assign) {
     TokenType operator_type = s_parser->previous.type;
 
@@ -792,7 +807,7 @@ void Compiler::method() {
     consume(TokenType::IDENTIFIER, "Expect method name.");
     uint8_t constant = identifier_constant(s_parser->previous);
 
-    FunctionType type = FunctionType::FUNCTION;
+    FunctionType type = FunctionType::METHOD;
     function(type);
     emit_opcode_arg(OpCode::METHOD, constant);
 }

@@ -77,6 +77,8 @@ private:
     void runtime_error(const char* format, ...);
     void define_native(const char* name, NativeFn function);
     void push(Value value);
+    // Patch value at given distance from the top of the stack
+    void patch(Value value, std::size_t distance);
     Value pop();
     Value peek(std::size_t distance);
     bool call_value(Value callee, std::size_t arg_count);

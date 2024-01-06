@@ -108,6 +108,11 @@ void VM::push(Value value) {
     m_stack.push_back(value);
 }
 
+void VM::patch(Value value, std::size_t distance) {
+    // TODO: Add bounds checking in debug builds?
+    m_stack[m_stack.size() - 1 - distance] = value;
+}
+
 Value VM::pop() {
     // TODO: Add bounds checking in debug builds?
     Value val = m_stack.back();
@@ -125,6 +130,11 @@ bool VM::call_value(Value callee, std::size_t arg_count) {
         switch (callee.obj_type()) {
             case ObjType::BOUND_METHOD: {
                 ObjBoundMethod* bound = callee.as_bound_method();
+                // When a method is called, the top of the stack contains all of the arguments, 
+                // and then just under those is the closure of the called method. That’s where 
+                // slot zero in the new CallFrame will be. This line of code inserts the 
+                // receiver into that slot.
+                patch(bound->receiver(), arg_count);
                 return call(bound->method(), arg_count);
             }
             case ObjType::CLASS: {
