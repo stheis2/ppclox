@@ -123,6 +123,10 @@ Value VM::peek(std::size_t distance) {
 bool VM::call_value(Value callee, std::size_t arg_count) {
     if (callee.is_obj()) {
         switch (callee.obj_type()) {
+            case ObjType::BOUND_METHOD: {
+                ObjBoundMethod* bound = callee.as_bound_method();
+                return call(bound->method(), arg_count);
+            }
             case ObjType::CLASS: {
                 ObjClass* klass = callee.as_class();
                 // Create the new instance
@@ -222,7 +226,27 @@ void VM::define_method(ObjString* name) {
     ObjClass* klass = peek(1).as_class();
     klass->set_method(name, method);
     pop();
+}
 
+bool VM::bind_method(ObjClass* klass, ObjString* name) {
+    auto maybe_method = klass->get_method(name);
+    if (!maybe_method.has_value()) {
+        runtime_error("Undefined property '%s'.", name->chars());
+        return false;
+    }
+
+    // Instance receiving the method is at the top of the stack.
+    // Casting directly is safe since we trust the code generated
+    // by the compiler. That said, it might not be a bad idea to
+    // guard against this here anyway.
+    ObjInstance* instance_receiver = peek(0).as_instance();
+    ObjClosure* method_closure = maybe_method.value().as_closure();
+    ObjBoundMethod* bound = new ObjBoundMethod(instance_receiver, method_closure);
+
+    // Pop the instance and push the bound method
+    pop();
+    push(bound);
+    return true;
 }
 
 InterpretResult VM::run() {
@@ -333,8 +357,10 @@ InterpretResult VM::run() {
                     break;
                 }
 
-                runtime_error("Undefined property '%s'.", name->chars());
-                return InterpretResult::RUNTIME_ERROR;
+                if (!bind_method(instance->get_class(), name)) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                break;
             }
             case std::to_underlying(OpCode::SET_PROPERTY): {
                 if (!peek(1).is_instance()) {

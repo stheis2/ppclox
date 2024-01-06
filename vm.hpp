@@ -85,6 +85,7 @@ private:
     // Close upvalues starting at the given index and proceeding to the top of the stack
     void close_upvalues(std::size_t start_index);
     void define_method(ObjString* name);
+    bool bind_method(ObjClass* klass, ObjString* name);
 
     InterpretResult run();
 
