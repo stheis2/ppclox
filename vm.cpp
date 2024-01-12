@@ -196,6 +196,36 @@ bool VM::call_value(Value callee, std::size_t arg_count) {
     return false;
 }
 
+bool VM::invoke_from_class(ObjClass* klass, ObjString* name, std::uint8_t arg_count) {
+    auto maybe_method = klass->get_method(name);
+    if (!maybe_method.has_value()) {
+        runtime_error("undefined property '%s'.", name->chars());
+        return false;
+    }
+    return call(maybe_method.value().as_closure(), arg_count);
+}
+
+bool VM::invoke(ObjString* name, std::uint8_t arg_count) {
+    Value receiver = peek(arg_count);
+
+    if (!receiver.is_instance()) {
+        runtime_error("Only instances have methods.");
+        return false;
+    }
+
+    ObjInstance* instance = receiver.as_instance();
+
+    // Fields shadow methods, so we need to call that if its there.
+    // We need to store the field in place of the receiver under the argument list
+    auto maybe_field = instance->get_field(name);
+    if (maybe_field.has_value()) {
+        patch(maybe_field.value(), arg_count);
+        return call_value(maybe_field.value(), arg_count);
+    }
+
+    return invoke_from_class(instance->get_class(), name, arg_count);
+}
+
 bool VM::call(ObjClosure* closure, std::size_t arg_count) {
     if (arg_count != closure->function()->m_arity) {
         runtime_error("Expected %zd arguments but got %zd.", closure->function()->m_arity, arg_count);
@@ -518,6 +548,17 @@ InterpretResult VM::run() {
             case std::to_underlying(OpCode::CALL): {
                 std::uint8_t arg_count = read_byte();
                 if (!call_value(peek(arg_count), arg_count)) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                // NOTE! If we were caching call frames some how instead
+                //       of going through the m_call_stack vector,
+                //       we would need to update that here.
+                break;
+            }
+            case std::to_underlying(OpCode::INVOKE): {
+                ObjString* method = read_string();
+                std::uint8_t arg_count = read_byte();
+                if (!invoke(method, arg_count)) {
                     return InterpretResult::RUNTIME_ERROR;
                 }
                 // NOTE! If we were caching call frames some how instead

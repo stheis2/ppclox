@@ -84,6 +84,8 @@ private:
     Value pop();
     Value peek(std::size_t distance);
     bool call_value(Value callee, std::size_t arg_count);
+    bool invoke_from_class(ObjClass* klass, ObjString* name, std::uint8_t arg_count);
+    bool invoke(ObjString* name, std::uint8_t arg_count);
     bool call(ObjClosure* closure, std::size_t arg_count);
     ObjUpvalue* capture_upvalue(std::size_t stack_index);
     // Close upvalues starting at the given index and proceeding to the top of the stack

@@ -33,6 +33,7 @@ enum class OpCode : std::uint8_t {
     JUMP_IF_FALSE,
     LOOP,
     CALL,
+    INVOKE,
     CLOSURE,
     CLOSE_UPVALUE,
     RETURN,
@@ -65,6 +66,7 @@ private:
     static std::size_t jump_instruction(const char* name, bool is_forward, const Chunk& chunk, std::size_t offset);
     static std::size_t constant_instruction(const char* name, const Chunk& chunk, std::size_t offset);
     static std::size_t closure_instruction(const char* name, const Chunk& chunk, std::size_t offset);
+    static std::size_t invoke_instruction(const char* name, const Chunk& chunk, std::size_t offset);
 };
 
 #endif

@@ -576,6 +576,10 @@ void Compiler::dot(bool can_assign) {
     if (can_assign && match(TokenType::EQUAL)) {
         expression();
         emit_opcode_arg(OpCode::SET_PROPERTY, name);
+    } else if (match(TokenType::LEFT_PAREN)) {
+        std::uint8_t arg_count = argument_list();
+        emit_opcode_arg(OpCode::INVOKE, name);
+        emit_byte(arg_count);
     } else {
         emit_opcode_arg(OpCode::GET_PROPERTY, name);
     }

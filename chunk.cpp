@@ -96,6 +96,8 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
             return jump_instruction("OP_LOOP", false, *this, offset);
         case std::to_underlying(OpCode::CALL):
             return byte_instruction("OP_CALL", *this, offset);
+        case std::to_underlying(OpCode::INVOKE):
+            return invoke_instruction("OP_INVOKE", *this, offset);            
         case std::to_underlying(OpCode::CLOSURE):
             return closure_instruction("OP_CLOSURE", *this, offset);
         case std::to_underlying(OpCode::CLOSE_UPVALUE):
@@ -160,4 +162,13 @@ std::size_t Chunk::closure_instruction(const char* name, const Chunk& chunk, std
                offset - 2, is_local ? "local" : "upvalue", index);
     }
     return offset;
+}
+
+std::size_t Chunk::invoke_instruction(const char* name, const Chunk& chunk, std::size_t offset) {
+    std::uint8_t constant = chunk.get_code().at(offset + 1);
+    std::uint8_t arg_count = chunk.get_code().at(offset + 2);
+    printf("%-16s (%d args) %4d '", name, arg_count, constant);
+    chunk.get_constants().at(constant).print();
+    printf("'\n");
+    return offset + 3;
 }
