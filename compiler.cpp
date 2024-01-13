@@ -743,6 +743,20 @@ void Compiler::class_declaration() {
     // ClassCompiler onto that stack.
     s_class_compilers.emplace_back();
 
+    // Deal with inheriting from a superclass if present
+    if (match(TokenType::LESS)) {
+        consume(TokenType::IDENTIFIER, "Expect superclass name.");
+        variable(false);
+
+        // Can't inherit from self
+        if (class_name.as_string_view() == s_parser->previous.as_string_view()) {
+            error("A class can't inherit from itself.");
+        }
+
+        named_variable(class_name, false);
+        emit_opcode(OpCode::INHERIT);
+    }
+
     // Before we start binding methods, we emit whatever 
     // code is necessary to load the class back on top of 
     // the stack.

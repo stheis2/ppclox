@@ -40,21 +40,37 @@
 
 //Nested().method();
 
-class CoffeeMaker {
-  init(coffee) {
-    this.coffee = coffee;
-  }
+//class CoffeeMaker {
+  //init(coffee) {
+    //this.coffee = coffee;
+  //}
 
-  brew() {
-    print "Enjoy your cup of " + this.coffee;
+  //brew() {
+    //print "Enjoy your cup of " + this.coffee;
 
     // No reusing the grounds!
-    this.coffee = nil;
+    //this.coffee = nil;
+  //}
+//}
+
+//var maker = CoffeeMaker("coffee and chicory");
+//maker.coffee = "coffee and chicory";
+//maker.brew();
+
+//print "made it!";
+
+class Doughnut {
+  cook() {
+    print "Dunk in the fryer.";
   }
 }
 
-var maker = CoffeeMaker("coffee and chicory");
-//maker.coffee = "coffee and chicory";
-maker.brew();
+class Cruller < Doughnut {
+  finish() {
+    print "Glaze with icing.";
+  }
+}
 
-print "made it!";
+var cruller = Cruller();
+cruller.cook();
+cruller.finish();

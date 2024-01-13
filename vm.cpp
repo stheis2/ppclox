@@ -637,6 +637,18 @@ InterpretResult VM::run() {
                 push(new ObjClass(read_string()));
                 break;
             }
+            case std::to_underlying(OpCode::INHERIT): {
+                Value superclass = peek(1);
+                if (!superclass.is_class()) {
+                    runtime_error("Superclass must be a class.");
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                ObjClass* subclass = peek(0).as_class();
+                subclass->inherit_methods_from(superclass.as_class());
+                // Pop the subclass
+                pop();
+                break;
+            }
             case std::to_underlying(OpCode::METHOD): {
                 define_method(read_string());
                 break;

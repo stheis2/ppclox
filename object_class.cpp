@@ -33,6 +33,13 @@ void ObjClass::mark_methods_gc_gray() {
     }
 }
 
+void ObjClass::inherit_methods_from(ObjClass* superclass) {
+    // Copy all the methods from the superclass into the subclass
+    for (auto method_pair : superclass->m_methods) {
+        m_methods[method_pair.first] = method_pair.second;
+    }
+}
+
 ObjInstance::~ObjInstance() {
     // When we are being destructed, inform the garbage collector of the
     // approximate number of additional bytes being removed due to the fields.

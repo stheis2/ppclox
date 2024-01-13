@@ -22,6 +22,8 @@ public:
     std::optional<Value> get_method(ObjString* name);
     void set_method(ObjString* name, Value value);
     void mark_methods_gc_gray();
+    // Inherit all methods from the given superclass
+    void inherit_methods_from(ObjClass* superclass);
 private:
     ObjString* m_name{};
 //TODO: I think these Values are always ObjClosures, so we could store them
