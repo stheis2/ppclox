@@ -20,7 +20,8 @@ public:
 };
 
 class ClassCompiler {
-
+public:
+    bool m_has_superclass{};
 };
 
 enum class Precedence {
@@ -115,6 +116,7 @@ private:
 
     /** During compilation, we also maintain a stack of ClassCompilers */
     static std::vector<ClassCompiler> s_class_compilers;
+    static ClassCompiler& current_class_compiler() { return s_class_compilers.at(s_class_compilers.size() - 1); }
 
     /** 
      * During compilation, we sometimes need to hang on to some objects to prevent them

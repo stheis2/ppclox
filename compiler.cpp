@@ -753,8 +753,16 @@ void Compiler::class_declaration() {
             error("A class can't inherit from itself.");
         }
 
+        // Add "super" local variable
+        begin_scope();
+        add_local(Token("super"));
+        define_variable(0);
+
         named_variable(class_name, false);
         emit_opcode(OpCode::INHERIT);
+
+        // Indicate in the class compiler that we have a super class
+        current_class_compiler().m_has_superclass = true;
     }
 
     // Before we start binding methods, we emit whatever 
@@ -775,6 +783,10 @@ void Compiler::class_declaration() {
     // longer need the class and tell the VM to pop it off 
     // the stack.
     emit_opcode(OpCode::POP);
+
+    if (current_class_compiler().m_has_superclass) {
+        end_scope();
+    }
 
     // At the end of the class body, we pop that compiler off the stack
     s_class_compilers.pop_back();
