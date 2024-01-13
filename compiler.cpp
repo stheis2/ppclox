@@ -47,7 +47,7 @@ ParseRule Compiler::s_rules[] = {
     {nullptr,     or_,       Precedence::OR},           // [TokenType::OR]            
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::PRINT]         
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::RETURN]        
-    {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::SUPER]         
+    {super_,      nullptr,   Precedence::NONE},         // [TokenType::SUPER]         
     {this_,       nullptr,   Precedence::NONE},         // [TokenType::THIS]          
     {literal,     nullptr,   Precedence::NONE},         // [TokenType::TRUE]          
     {nullptr,     nullptr,   Precedence::NONE},         // [TokenType::VAR]           
@@ -663,6 +663,24 @@ void Compiler::named_variable(const Token& name, bool can_assign) {
 
 void Compiler::variable(bool can_assign) {
     named_variable(s_parser->previous, can_assign);
+}
+
+void Compiler::super_(bool can_assign) {
+    if (s_class_compilers.size() == 0) {
+        error("Can't use 'super' outside of a class.");
+    } else if (!current_class_compiler().m_has_superclass) {
+        error("Can't use 'super' in a class with no superclass.");
+    }
+
+    consume(TokenType::DOT, "Expect '.' after 'super'.");
+    consume(TokenType::IDENTIFIER, "Expect superclass method name.");
+    std::uint8_t name = identifier_constant(s_parser->previous);
+
+    // Generate OP_GET_LOCAL and OP_GET_UPVALUE instructions to
+    // get "this" and then "super" on the stack.
+    named_variable(Token("this"), false);
+    named_variable(Token("super"), false);
+    emit_opcode_arg(OpCode::GET_SUPER, name);
 }
 
 void Compiler::this_(bool can_assign) {

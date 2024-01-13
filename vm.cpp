@@ -438,6 +438,15 @@ InterpretResult VM::run() {
                 break;
 
             }
+            case std::to_underlying(OpCode::GET_SUPER): {
+                ObjString* name = read_string();
+                ObjClass* superclass = pop().as_class();
+
+                if (!bind_method(superclass, name)) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                break;
+            }
             case std::to_underlying(OpCode::EQUAL): {
                 Value b = pop();
                 Value a = pop();

@@ -19,6 +19,7 @@ enum class OpCode : std::uint8_t {
     SET_UPVALUE,
     GET_PROPERTY,
     SET_PROPERTY,
+    GET_SUPER,
     EQUAL,
     GREATER,
     LESS,

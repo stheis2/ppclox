@@ -184,6 +184,7 @@ private:
     static void string(bool can_assign);
     static void named_variable(const Token& name, bool can_assign);
     static void variable(bool can_assign);
+    static void super_(bool can_assign);
     static void this_(bool can_assign);
     static void unary(bool can_assign);
     static void expression();
