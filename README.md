@@ -1,6 +1,6 @@
 # ppclox
 
-C++ re-implementation of clox C bytecode interpreter for toy programming language Lox (from the book "Crafting Interpreters" by Robert Nystrom: https://github.com/munificent/craftinginterpreters)
+C++ re-implementation of toy language Lox (from the book "Crafting Interpreters" by Robert Nystrom: https://github.com/munificent/craftinginterpreters). Follows the approach of "clox", the C bytecode intepreter.
 
 Currently missing final chapter 30 on Optimization, though I may include that eventually.
 
