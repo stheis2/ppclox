@@ -99,7 +99,9 @@ std::size_t Chunk::disassemble_instruction(std::size_t offset) {
         case std::to_underlying(OpCode::CALL):
             return byte_instruction("OP_CALL", *this, offset);
         case std::to_underlying(OpCode::INVOKE):
-            return invoke_instruction("OP_INVOKE", *this, offset);            
+            return invoke_instruction("OP_INVOKE", *this, offset);
+        case std::to_underlying(OpCode::SUPER_INVOKE):
+            return invoke_instruction("OP_SUPER_INVOKE", *this, offset);
         case std::to_underlying(OpCode::CLOSURE):
             return closure_instruction("OP_CLOSURE", *this, offset);
         case std::to_underlying(OpCode::CLOSE_UPVALUE):

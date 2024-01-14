@@ -575,6 +575,18 @@ InterpretResult VM::run() {
                 //       we would need to update that here.
                 break;
             }
+            case std::to_underlying(OpCode::SUPER_INVOKE): {
+                ObjString* method = read_string();
+                std::uint8_t arg_count = read_byte();
+                ObjClass* superclass = pop().as_class();
+                if (!invoke_from_class(superclass, method, arg_count)) {
+                    return InterpretResult::RUNTIME_ERROR;
+                }
+                // NOTE! If we were caching call frames some how instead
+                //       of going through the m_call_stack vector,
+                //       we would need to update that here.
+                break;
+            }
             case std::to_underlying(OpCode::CLOSURE): {
                 ObjFunction* function = read_constant().as_function();
                 ObjClosure* closure = new ObjClosure(function);

@@ -679,8 +679,15 @@ void Compiler::super_(bool can_assign) {
     // Generate OP_GET_LOCAL and OP_GET_UPVALUE instructions to
     // get "this" and then "super" on the stack.
     named_variable(Token("this"), false);
-    named_variable(Token("super"), false);
-    emit_opcode_arg(OpCode::GET_SUPER, name);
+    if (match(TokenType::LEFT_PAREN)) {
+        std::uint8_t arg_count = argument_list();
+        named_variable(Token("super"), false);
+        emit_opcode_arg(OpCode::SUPER_INVOKE, name);
+        emit_byte(arg_count);
+    } else {
+        named_variable(Token("super"), false);
+        emit_opcode_arg(OpCode::GET_SUPER, name);
+    }
 }
 
 void Compiler::this_(bool can_assign) {
