@@ -107,9 +107,6 @@ private:
     void blacken();
     /** Reset object color to white */
     void whiten() { m_gc_color = ObjGcColor::WHITE; };
-
-//TODO: Implement custom new and delete for objs? And how do we account for the ObjStrings
-// memory?   
 };
 
 #endif

@@ -9,8 +9,6 @@
 #include "object.hpp"
 #include "object_string.hpp"
 
-//class ObjString;
-
 class ObjClass : public Obj {
 public:
     ObjClass(ObjString* name) : Obj(ObjType::CLASS), m_name(name) {}
