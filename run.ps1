@@ -1,5 +1,3 @@
-# TODO: Should use an actual build system instead of bespoke script
-
 try {
     Push-Location $PSScriptRoot
 
@@ -13,7 +11,6 @@ try {
         if ($LASTEXITCODE -ne 0) {
             Write-Host ""
             Write-Host "Non-zero exit code from cl: $LASTEXITCODE"
-            # Return from this script
             return
         }
     }

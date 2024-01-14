@@ -59,9 +59,6 @@
     <ClInclude Include="object.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="object_all_types.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="object_function.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
