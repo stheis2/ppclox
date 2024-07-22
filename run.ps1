@@ -1,6 +1,10 @@
 try {
     Push-Location $PSScriptRoot
 
+    if (!(Test-Path -PathType Container -Path "./build")) {
+        New-Item -ItemType Directory -Path "./build"
+    }
+
     try {
         Push-Location ./build
 
