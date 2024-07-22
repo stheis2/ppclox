@@ -37,7 +37,7 @@ Other notable items:
 ## Building and running
 
 * Code should be portable to any platform with a modern C++ compiler supporting C++23 but I've only setup builds for Visual Studio 2022 on Windows
-* Can open ppclox.sln in Visual Studio 2022 and run it vie the IDE, OR open Visual Studio 2022 Developer command prompt and run "run.ps1" script via powershell: `powershell ./run`
+* Can open ppclox.sln in Visual Studio 2022 and run it vie the IDE, OR open Visual Studio 2022 Developer command prompt, navigate to the repo folder, and run "run.ps1" script via powershell: `powershell ./run`
 * Currently set up to run test_file.lox script. Remove from run.ps1 or ppclox.vcxproj.user file to run the REPL.
 
 
