@@ -6,7 +6,7 @@ Currently missing final chapter 30 on Optimization, though I may include that ev
 
 ## Why does this exist
 
-I though it would be interesting to port the C interpreter to C++ since it seemed it could benefit from C++ idioms and the C++ standard library.
+I thought it would be interesting to port the C interpreter to C++ since it seemed it could benefit from C++ idioms and the C++ standard library.
 
 NOTE! I'm *not* a C++ developer in my day job (I typically work in other languages like C# and TypeScript). I'm sure there are many ways this code could be improved, though I don't plan to spend further time on it at this time. I did this as an exercise to try to expand my knowledge.
 
