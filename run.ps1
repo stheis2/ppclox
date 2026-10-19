@@ -1,3 +1,8 @@
+param(
+    [switch]
+    $skip_build
+)
+
 try {
     Push-Location $PSScriptRoot
 
@@ -5,21 +10,23 @@ try {
         New-Item -ItemType Directory -Path "./build"
     }
 
-    try {
-        Push-Location ./build
+    if (!$skip_build) {
+        try {
+            Push-Location ./build
 
-        # NOTE! /EHsc is included to silence warning C4530: 
-        #       C++ exception handler used, but unwind semantics are not enabled. 
-        #       Specify /EHsc
-        cl /std:c++latest /EHsc ../*.cpp /link /out:pplox.exe
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host ""
-            Write-Host "Non-zero exit code from cl: $LASTEXITCODE"
-            return
+            # NOTE! /EHsc is included to silence warning C4530: 
+            #       C++ exception handler used, but unwind semantics are not enabled. 
+            #       Specify /EHsc
+            cl /std:c++latest /EHsc ../*.cpp /link /out:pplox.exe
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host ""
+                Write-Host "Non-zero exit code from cl: $LASTEXITCODE"
+                return
+            }
         }
-    }
-    finally {
-        Pop-Location
+        finally {
+            Pop-Location
+        }
     }
 
     Write-Host ""

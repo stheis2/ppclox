@@ -11,6 +11,8 @@
 // Verious ubiquitous data structures
 #include <vector>
 #include <string_view>
+// For std::to_underlying
+#include <utility>
 
 #define DEBUG_PRINT_CODE
 #define DEBUG_TRACE_EXECUTION

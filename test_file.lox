@@ -1,21 +1,15 @@
-class Doughnut {
-  cook() {
-    print "Dunk in the fryer.";
-    this.finish("sprinkles");
-  }
-
-  finish(ingredient) {
-    print "Finish with " + ingredient;
-  }
+fun fib(n) {
+  if (n < 2) return n;
+  return fib(n - 2) + fib(n - 1);
 }
 
-class Cruller < Doughnut {
-  finish(ingredient) {
-    // No sprinkles, always icing.
-    super.finish("icing");
-  }
-}
-
-var cruller = Cruller();
-cruller.cook();
-cruller.finish("My stuff!");
+var start = clock();
+//print fib(0); // 0
+//print fib(1); // 1
+//print fib(2); // 1
+//print fib(3); // 2
+//print fib(4); // 3
+//print fib(5); // 5
+//print fib(6); // 8
+print fib(10);
+print (clock() - start);
